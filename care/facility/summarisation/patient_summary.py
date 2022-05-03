@@ -124,9 +124,7 @@ def PatientSummary():
             )
             facility.created_date = now()
             facility.data.pop("modified_date")
-            if facility.data == patient_summary[i]:
-                pass
-            else:
+            if facility.data != patient_summary[i]:
                 facility.data = patient_summary[i]
                 latest_modification_date = now()
                 facility.data.update(

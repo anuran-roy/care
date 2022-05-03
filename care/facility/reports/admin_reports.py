@@ -94,7 +94,7 @@ class AdminReports:
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             )
-            key = "reports/" + str(uuid4()) + str(int(time.time())) + ".pdf"
+            key = f"reports/{str(uuid4())}{int(time.time())}.pdf"
             s3Client.put_object(
                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
                 Key=key,
@@ -107,9 +107,8 @@ class AdminReports:
     # Summary Functions
 
     def calculate_patient_summary(self, base_filters):
-        return_dict = {}
         base_queryset = PatientRegistration.objects.filter(**base_filters)
-        return_dict["current_active"] = base_queryset.filter(is_active=True).count()
+        return_dict = {"current_active": base_queryset.filter(is_active=True).count()}
         return_dict["created_today"] = base_queryset.filter(
             is_active=True, created_date__gte=self.start_date, created_date__lte=self.end_date
         ).count()
@@ -149,10 +148,9 @@ class AdminReports:
         return return_list
 
     def calculate_shifting_summary(self, base_filters):
-        return_dict = {}
         base_queryset = ShiftingRequest.objects.filter(**base_filters)
         today_queryset = base_queryset.filter(created_date__gte=self.start_date, created_date__lte=self.end_date)
-        return_dict["total_up"] = today_queryset.filter(is_up_shift=True).count()
+        return_dict = {"total_up": today_queryset.filter(is_up_shift=True).count()}
         return_dict["total_down"] = today_queryset.filter(is_up_shift=False).count()
         return_dict["total_count"] = return_dict["total_up"] + return_dict["total_down"]
         return return_dict
@@ -168,10 +166,9 @@ class AdminReports:
         return return_list
 
     def generate_report_data(self, object_id):
-        final_data = {}
         base_filters = {self.filter_field: object_id}
-        shifting_base_filter = {"patient__" + self.filter_field: object_id}
-        final_data["patients_summary"] = self.calculate_patient_summary(base_filters)
+        shifting_base_filter = {f"patient__{self.filter_field}": object_id}
+        final_data = {"patients_summary": self.calculate_patient_summary(base_filters)}
         final_data["patients_age"] = self.caluclate_patient_age_summary(base_filters)
         final_data["patients_categories"] = self.caluclate_patient_category_summary(base_filters)
         final_data["shifting_summary"] = self.calculate_shifting_summary(shifting_base_filter)

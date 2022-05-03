@@ -83,39 +83,44 @@ class FacilityViewSet(
 
     def destroy(self, request, *args, **kwargs):
         if request.user.is_superuser or request.user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]:
-            if not PatientRegistration.objects.filter(facility=self.get_object(), is_active=True).exists():
-                return super().destroy(request, *args, **kwargs)
-            else:
-                return Response(
+            return (
+                Response(
                     {"facility": "cannot delete facility with active patients"},
                     status=status.HTTP_403_FORBIDDEN,
                 )
+                if PatientRegistration.objects.filter(
+                    facility=self.get_object(), is_active=True
+                ).exists()
+                else super().destroy(request, *args, **kwargs)
+            )
+
         return Response({"permission": "denied"}, status=status.HTTP_403_FORBIDDEN)
 
     def list(self, request, *args, **kwargs):
-        if settings.CSV_REQUEST_PARAMETER in request.GET:
-            mapping = Facility.CSV_MAPPING.copy()
-            pretty_mapping = Facility.CSV_MAKE_PRETTY.copy()
-            if self.FACILITY_CAPACITY_CSV_KEY in request.GET:
-                mapping.update(FacilityCapacity.CSV_RELATED_MAPPING.copy())
-                pretty_mapping.update(FacilityCapacity.CSV_MAKE_PRETTY.copy())
-            elif self.FACILITY_DOCTORS_CSV_KEY in request.GET:
-                mapping.update(HospitalDoctors.CSV_RELATED_MAPPING.copy())
-                pretty_mapping.update(HospitalDoctors.CSV_MAKE_PRETTY.copy())
-            elif self.FACILITY_TRIAGE_CSV_KEY in request.GET:
-                mapping.update(FacilityPatientStatsHistory.CSV_RELATED_MAPPING.copy())
-                pretty_mapping.update(FacilityPatientStatsHistory.CSV_MAKE_PRETTY.copy())
-            queryset = self.filter_queryset(self.get_queryset()).values(*mapping.keys())
-            return render_to_csv_response(queryset, field_header_map=mapping, field_serializer_map=pretty_mapping)
-
-        return super(FacilityViewSet, self).list(request, *args, **kwargs)
+        if settings.CSV_REQUEST_PARAMETER not in request.GET:
+            return super(FacilityViewSet, self).list(request, *args, **kwargs)
+        mapping = Facility.CSV_MAPPING.copy()
+        pretty_mapping = Facility.CSV_MAKE_PRETTY.copy()
+        if self.FACILITY_CAPACITY_CSV_KEY in request.GET:
+            mapping.update(FacilityCapacity.CSV_RELATED_MAPPING.copy())
+            pretty_mapping.update(FacilityCapacity.CSV_MAKE_PRETTY.copy())
+        elif self.FACILITY_DOCTORS_CSV_KEY in request.GET:
+            mapping.update(HospitalDoctors.CSV_RELATED_MAPPING.copy())
+            pretty_mapping.update(HospitalDoctors.CSV_MAKE_PRETTY.copy())
+        elif self.FACILITY_TRIAGE_CSV_KEY in request.GET:
+            mapping.update(FacilityPatientStatsHistory.CSV_RELATED_MAPPING.copy())
+            pretty_mapping.update(FacilityPatientStatsHistory.CSV_MAKE_PRETTY.copy())
+        queryset = self.filter_queryset(self.get_queryset()).values(*mapping.keys())
+        return render_to_csv_response(queryset, field_header_map=mapping, field_serializer_map=pretty_mapping)
 
     @action(methods=["GET"], detail=True)
     def get_users(self, request, external_id):
         user_type_filter = None
-        if "user_type" in request.GET:
-            if request.GET["user_type"] in User.TYPE_VALUE_MAP:
-                user_type_filter = User.TYPE_VALUE_MAP[request.GET["user_type"]]
+        if (
+            "user_type" in request.GET
+            and request.GET["user_type"] in User.TYPE_VALUE_MAP
+        ):
+            user_type_filter = User.TYPE_VALUE_MAP[request.GET["user_type"]]
         facility = Facility.objects.filter(external_id=external_id).first()
         if not facility:
             return Response({"facility": "does not exist"}, status=status.HTTP_404_NOT_FOUND)

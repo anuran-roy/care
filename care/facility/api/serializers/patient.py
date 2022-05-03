@@ -172,12 +172,19 @@ class PatientDetailSerializer(PatientListSerializer):
     def validate(self, attrs):
         validated = super().validate(attrs)
         if not self.partial and not validated.get("age") and not validated.get("date_of_birth"):
-            raise serializers.ValidationError({"non_field_errors": [f"Either age or date_of_birth should be passed"]})
+            raise serializers.ValidationError(
+                {
+                    "non_field_errors": [
+                        "Either age or date_of_birth should be passed"
+                    ]
+                }
+            )
+
 
         if validated.get("is_vaccinated"):
             if validated.get("number_of_doses") == 0:
                 raise serializers.ValidationError("Number of doses cannot be 0")
-            if validated.get("vaccine_name") == None:
+            if validated.get("vaccine_name") is None:
                 raise serializers.ValidationError("Vaccine name cannot be null")
 
         return validated
@@ -192,21 +199,14 @@ class PatientDetailSerializer(PatientListSerializer):
             meta_info = validated_data.pop("meta_info", {})
             contacted_patients = validated_data.pop("contacted_patients", [])
 
-            if "facility" in validated_data:
-                pass
-                # TODO Facility Authorization
-
-            if "srf_id" in validated_data:
-                if validated_data["srf_id"]:
-                    self.check_external_entry(validated_data["srf_id"])
+            if "srf_id" in validated_data and validated_data["srf_id"]:
+                self.check_external_entry(validated_data["srf_id"])
 
             validated_data["created_by"] = self.context["request"].user
             patient = super().create(validated_data)
-            diseases = []
-
-            for disease in medical_history:
-                diseases.append(Disease(patient=patient, **disease))
-            if diseases:
+            if diseases := [
+                Disease(patient=patient, **disease) for disease in medical_history
+            ]:
                 Disease.objects.bulk_create(diseases, ignore_conflicts=True)
 
             if meta_info:
@@ -239,20 +239,20 @@ class PatientDetailSerializer(PatientListSerializer):
             contacted_patients = validated_data.pop("contacted_patients", [])
 
             if "facility" in validated_data:
-                external_id = validated_data.pop("facility")["external_id"]
-                if external_id:
+                if external_id := validated_data.pop("facility")["external_id"]:
                     validated_data["facility_id"] = Facility.objects.get(external_id=external_id).id
 
-            if "srf_id" in validated_data:
-                if instance.srf_id != validated_data["srf_id"]:
-                    self.check_external_entry(validated_data["srf_id"])
+            if (
+                "srf_id" in validated_data
+                and instance.srf_id != validated_data["srf_id"]
+            ):
+                self.check_external_entry(validated_data["srf_id"])
 
             patient = super().update(instance, validated_data)
             Disease.objects.filter(patient=patient).update(deleted=True)
-            diseases = []
-            for disease in medical_history:
-                diseases.append(Disease(patient=patient, **disease))
-            if diseases:
+            if diseases := [
+                Disease(patient=patient, **disease) for disease in medical_history
+            ]:
                 Disease.objects.bulk_create(diseases, ignore_conflicts=True)
 
             if meta_info:

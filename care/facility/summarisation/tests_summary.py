@@ -73,7 +73,7 @@ def tests_summary():
             )
             facility_test_summary.created_date = timezone.now()
             facility_test_summary.data.pop("modified_date")
-            if not facility_test_summary.data == facility_tests_summarised_data:
+            if facility_test_summary.data != facility_tests_summarised_data:
                 facility_test_summary.data = facility_tests_summarised_data
                 latest_modification_date = timezone.now()
                 facility_test_summary.data.update(
@@ -82,7 +82,10 @@ def tests_summary():
                 facility_test_summary.save()
         except ObjectDoesNotExist:
             modified_date = timezone.now()
-            facility_tests_summarised_data.update({"modified_date": modified_date.strftime("%d-%m-%Y %H:%M")})
+            facility_tests_summarised_data[
+                "modified_date"
+            ] = modified_date.strftime("%d-%m-%Y %H:%M")
+
             FacilityRelatedSummary.objects.create(
                 s_type="TestSummary", facility=facility, data=facility_tests_summarised_data
             )

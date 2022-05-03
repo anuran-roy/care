@@ -10,10 +10,7 @@ from care.utils.models.base import BaseModel
 
 
 def reverse_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[0]] = choice[1]
-    return output
+    return {choice[0]: choice[1] for choice in choices}
 
 
 GENDER_CHOICES = [(1, "Male"), (2, "Female"), (3, "Non-binary")]
@@ -74,10 +71,7 @@ LOCAL_BODY_CHOICES = (
 
 
 def reverse_lower_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[1].lower()] = choice[0]
-    return output
+    return {choice[1].lower(): choice[0] for choice in choices}
 
 
 REVERSE_LOCAL_BODY_CHOICES = reverse_lower_choices(LOCAL_BODY_CHOICES)
@@ -260,7 +254,7 @@ class User(AbstractUser):
     def has_object_update_permission(self, request):
         if request.user.is_superuser:
             return True
-        if not self == request.user:
+        if self != request.user:
             return False
         if (request.data.get("district") or request.data.get("state")) and self.user_type >= User.TYPE_VALUE_MAP[
             "DistrictLabAdmin"

@@ -70,7 +70,10 @@ class FacilityInventoryLogSerializer(serializers.ModelSerializer):
         try:
             item.allowed_units.get(id=unit.id)
         except:
-            raise serializers.ValidationError({"unit": [f"Item cannot be measured with unit"]})
+            raise serializers.ValidationError(
+                {"unit": ["Item cannot be measured with unit"]}
+            )
+
 
         multiplier = 1
 
@@ -80,7 +83,10 @@ class FacilityInventoryLogSerializer(serializers.ModelSerializer):
                     from_unit=unit, to_unit=item.default_unit
                 ).multiplier
         except:
-            raise serializers.ValidationError({"item": [f"Please Ask Admin to Add Conversion Metrics"]})
+            raise serializers.ValidationError(
+                {"item": ["Please Ask Admin to Add Conversion Metrics"]}
+            )
+
 
         validated_data["created_by"] = self.context["request"].user
 
@@ -101,7 +107,7 @@ class FacilityInventoryLogSerializer(serializers.ModelSerializer):
             )
 
         if current_quantity < 0:
-            raise serializers.ValidationError({"stock": [f"Stock not Available"]})
+            raise serializers.ValidationError({"stock": ["Stock not Available"]})
 
         try:
             current_min_quantity = FacilityInventoryMinQuantity.objects.get(facility=facility, item=item).min_quantity
@@ -127,11 +133,13 @@ class FacilityInventoryLogSerializer(serializers.ModelSerializer):
 def set_burn_rate(facility, item):
     yesterday = timezone.now() - timedelta(days=1)
 
-    previous_usage_log_sum = FacilityInventoryLog.objects.filter(
-        probable_accident=False, facility=facility, item=item, is_incoming=False, created_date__gte=yesterday
-    ).aggregate(Sum("quantity_in_default_unit"))
-
-    if previous_usage_log_sum:
+    if previous_usage_log_sum := FacilityInventoryLog.objects.filter(
+        probable_accident=False,
+        facility=facility,
+        item=item,
+        is_incoming=False,
+        created_date__gte=yesterday,
+    ).aggregate(Sum("quantity_in_default_unit")):
         burn_rate = 0
         if previous_usage_log_sum["quantity_in_default_unit__sum"]:
             burn_rate = previous_usage_log_sum["quantity_in_default_unit__sum"] / 24
@@ -176,12 +184,12 @@ class FacilityInventoryMinQuantitySerializer(serializers.ModelSerializer):
         item = validated_data["item"]
 
         if not item:
-            raise serializers.ValidationError({"item": [f"Item cannot be Null"]})
+            raise serializers.ValidationError({"item": ["Item cannot be Null"]})
 
         try:
             instance = super().create(validated_data)
         except:
-            raise serializers.ValidationError({"item": [f"Item min quantity already set"]})
+            raise serializers.ValidationError({"item": ["Item min quantity already set"]})
 
         try:
             summary_obj = FacilityInventorySummary.objects.get(facility=validated_data["facility"], item=item)
@@ -194,9 +202,8 @@ class FacilityInventoryMinQuantitySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        if "item" in validated_data:
-            if instance.item != validated_data["item"]:
-                raise serializers.ValidationError({"item": [f"Item cannot be Changed"]})
+        if "item" in validated_data and instance.item != validated_data["item"]:
+            raise serializers.ValidationError({"item": ["Item cannot be Changed"]})
 
         item = validated_data["item"]
 

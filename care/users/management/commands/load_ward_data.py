@@ -34,9 +34,7 @@ class Command(BaseCommand):
             return int_or_zero(ward["ward_no"])
 
         def get_ward_name(ward):
-            if "ward_name" in ward:
-                return ward["ward_name"]
-            return ward["name"]
+            return ward["ward_name"] if "ward_name" in ward else ward["name"]
 
         folder = options["folder"]
         counter = 0
@@ -48,14 +46,18 @@ class Command(BaseCommand):
         LOCAL_BODY_CHOICE_MAP = dict([(c[1][0], c[0]) for c in LOCAL_BODY_CHOICES])
 
         def get_local_body(lb):
-            if not lb["district"]:
-                return None
-            return LocalBody.objects.filter(
-                name=lb["name"],
-                district=district_map[lb["district"]],
-                localbody_code=lb.get("localbody_code"),
-                body_type=LOCAL_BODY_CHOICE_MAP.get((lb.get("localbody_code", " "))[0], LOCAL_BODY_CHOICES[-1][0]),
-            ).first()
+            return (
+                LocalBody.objects.filter(
+                    name=lb["name"],
+                    district=district_map[lb["district"]],
+                    localbody_code=lb.get("localbody_code"),
+                    body_type=LOCAL_BODY_CHOICE_MAP.get(
+                        (lb.get("localbody_code", " "))[0], LOCAL_BODY_CHOICES[-1][0]
+                    ),
+                ).first()
+                if lb["district"]
+                else None
+            )
 
         for f in glob.glob(f"{folder}/*.json"):
             with open(f"{f}", "r") as data_f:

@@ -25,16 +25,15 @@ class PatientExternalTestSerializer(serializers.ModelSerializer):
         #     else:
         #         data["is_repeat"] = False
         district_obj = None
-        if "district" in data:
-            district = data["district"]
-            district_obj = District.objects.filter(name__icontains=district).first()
-            if district_obj:
-                data["district"] = district_obj.id
-            else:
-                raise ValidationError({"district": ["District Does not Exist"]})
-        else:
+        if "district" not in data:
             raise ValidationError({"district": ["District Not Present in Data"]})
 
+        district = data["district"]
+        district_obj = District.objects.filter(name__icontains=district).first()
+        if district_obj:
+            data["district"] = district_obj.id
+        else:
+            raise ValidationError({"district": ["District Does not Exist"]})
         if "local_body_type" not in data:
             raise ValidationError({"local_body_type": ["local_body_type is not present in data"]})
 
@@ -47,28 +46,28 @@ class PatientExternalTestSerializer(serializers.ModelSerializer):
         local_body_type = REVERSE_LOCAL_BODY_CHOICES[data["local_body_type"].lower()]
 
         local_body_obj = None
-        if "local_body" in data and district_obj:
-            if not data["local_body"]:
-                raise ValidationError({"local_body": ["Local Body Cannot Be Empty"]})
-            local_body = data["local_body"]
-            local_body_obj = LocalBody.objects.filter(
-                name__icontains=local_body, district=district_obj, body_type=local_body_type,
-            ).first()
-            if local_body_obj:
-                data["local_body"] = local_body_obj.id
-            else:
-                raise ValidationError({"local_body": ["Local Body Does not Exist"]})
-        else:
+        if "local_body" not in data or not district_obj:
             raise ValidationError({"local_body": ["Local Body Not Present in Data"]})
 
+        if not data["local_body"]:
+            raise ValidationError({"local_body": ["Local Body Cannot Be Empty"]})
+        local_body = data["local_body"]
+        local_body_obj = LocalBody.objects.filter(
+            name__icontains=local_body, district=district_obj, body_type=local_body_type,
+        ).first()
+        if local_body_obj:
+            data["local_body"] = local_body_obj.id
+        else:
+            raise ValidationError({"local_body": ["Local Body Does not Exist"]})
         if "ward" in data and local_body_obj:
             try:
                 int(data["ward"])
             except Exception:
                 raise ValidationError({"ward": ["Ward must be an integer value"]})
             if data["ward"]:
-                ward_obj = Ward.objects.filter(number=data["ward"], local_body=local_body_obj).first()
-                if ward_obj:
+                if ward_obj := Ward.objects.filter(
+                    number=data["ward"], local_body=local_body_obj
+                ).first():
                     data["ward"] = ward_obj.id
                 else:
                     raise ValidationError({"ward": ["Ward Does not Exist"]})
@@ -78,9 +77,13 @@ class PatientExternalTestSerializer(serializers.ModelSerializer):
         return super().validate_empty_values(data, *args, **kwargs)
 
     def create(self, validated_data):
-        if "srf_id" in validated_data:
-            if PatientRegistration.objects.filter(srf_id__iexact=validated_data["srf_id"]).exists():
-                validated_data["patient_created"] = True
+        if (
+            "srf_id" in validated_data
+            and PatientRegistration.objects.filter(
+                srf_id__iexact=validated_data["srf_id"]
+            ).exists()
+        ):
+            validated_data["patient_created"] = True
         return super().create(validated_data)
 
     class Meta:

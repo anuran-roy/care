@@ -24,7 +24,7 @@ from care.facility.models import (
 
 def randomString(stringLength):
     letters = string.ascii_letters
-    return "".join(random.choice(letters) for i in range(stringLength))
+    return "".join(random.choice(letters) for _ in range(stringLength))
 
 
 @celery.task()
@@ -70,6 +70,9 @@ def generate_discharge_report(patient_id, email):
         "Patient Discharge Summary", "Please find the attached file", settings.DEFAULT_FROM_EMAIL, (email,),
     )
     msg.content_subtype = "html"  # Main content is now text/html
-    msg.attach(patient.name + "-Discharge_Summary.pdf", file.read(), "application/pdf")
+    msg.attach(
+        f"{patient.name}-Discharge_Summary.pdf", file.read(), "application/pdf"
+    )
+
     msg.send()
     default_storage.delete(filename)

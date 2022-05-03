@@ -34,8 +34,7 @@ class MiddlewareAuthentication(JWTAuthentication):
         public_key = requests.get(url)
         jwk = public_key.json()["keys"][0]
         public_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwk))
-        payload = jwt.decode(token, key=public_key, algorithms=["RS256"])
-        return payload
+        return jwt.decode(token, key=public_key, algorithms=["RS256"])
 
     def authenticate(self, request):
         header = self.get_header(request)
@@ -58,9 +57,7 @@ class MiddlewareAuthentication(JWTAuthentication):
         if not facility:
             raise InvalidToken({"detail": "Invalid Facility", "messages": []})
 
-        open_id_url = "http://localhost:8090"  # TODO Replace Facility's Host name
-        open_id_url += "/.well-known/openid-configuration/"
-
+        open_id_url = "http://localhost:8090" + "/.well-known/openid-configuration/"
         validated_token = self.get_validated_token(open_id_url, raw_token)
 
         return self.get_user(validated_token, facility), validated_token
@@ -131,15 +128,16 @@ class MiddlewareAuthentication(JWTAuthentication):
         if not asset_user:
             password = User.objects.make_random_password()
             asset_user = User(
-                username="asset" + str(asset_obj.external_id),
+                username=f"asset{str(asset_obj.external_id)}",
                 email="support@coronasafe.network",
-                password=password + "123",
+                password=f"{password}123",
                 gender=3,
                 phone_number="919999999999",
                 user_type=User.TYPE_VALUE_MAP["Staff"],
                 verified=True,
                 asset=asset_obj,
                 age=10,
-            )  # The 123 makes it inaccesible without hashing
+            )
+
             asset_user.save()
         return asset_user

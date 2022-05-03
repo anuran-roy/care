@@ -28,17 +28,11 @@ def pretty_boolean(val, a="YES", b="NO", c="Not Specified"):
 
 
 def reverse_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[0]] = choice[1]
-    return output
+    return {choice[0]: choice[1] for choice in choices}
 
 
 def covert_choice_dict(choices):
-    output = {}
-    for choice in choices:
-        output[choice[1]] = choice[0]
-    return output
+    return {choice[1]: choice[0] for choice in choices}
 
 
 class FacilityBaseModel(BaseModel):

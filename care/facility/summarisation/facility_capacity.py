@@ -111,18 +111,15 @@ def FacilityCapacitySummary():
             if end_log:
                 end_stock = end_log.current_stock
             total_consumed = 0
-            temp1 = log_query.filter(is_incoming=False).aggregate(Sum("quantity_in_default_unit"))
-            if temp1:
-                total_consumed = temp1.get("quantity_in_default_unit__sum", 0)
-                if not total_consumed:
-                    total_consumed = 0
+            if temp1 := log_query.filter(is_incoming=False).aggregate(
+                Sum("quantity_in_default_unit")
+            ):
+                total_consumed = temp1.get("quantity_in_default_unit__sum", 0) or 0
             total_added = 0
-            temp2 = log_query.filter(is_incoming=True).aggregate(Sum("quantity_in_default_unit"))
-            if temp2:
-                total_added = temp2.get("quantity_in_default_unit__sum", 0)
-                if not total_added:
-                    total_added = 0
-
+            if temp2 := log_query.filter(is_incoming=True).aggregate(
+                Sum("quantity_in_default_unit")
+            ):
+                total_added = temp2.get("quantity_in_default_unit__sum", 0) or 0
             # Calculate Start Stock as
             # end_stock = start_stock - consumption + addition
             # start_stock = end_stock - addition + consumption

@@ -137,10 +137,7 @@ class PatientDRYFilter(DRYPermissionFiltersBase):
     def filter_list_queryset(self, request, queryset, view):
         try:
             show_without_facility = json.loads(request.query_params.get("without_facility"))
-        except (
-            JSONDecodeError,
-            TypeError,
-        ):
+        except TypeError:
             show_without_facility = False
         return queryset.filter(facility_id__isnull=show_without_facility)
 
@@ -243,89 +240,41 @@ class PatientViewSet(
             EXPIRED = 6
 
         """
-        if settings.CSV_REQUEST_PARAMETER in request.GET:
-            # Start Date Validation
-            temp = filters.DjangoFilterBackend().get_filterset(self.request, self.queryset, self)
-            temp.is_valid()
-            within_limits = False
-            for field in self.date_range_fields:
-                slice_obj = temp.form.cleaned_data.get(field)
-                if slice_obj:
-                    if not slice_obj.start or not slice_obj.stop:
-                        raise ValidationError({field: f"both starting and ending date must be provided for export"})
-                    days_difference = (
-                        temp.form.cleaned_data.get(field).stop - temp.form.cleaned_data.get(field).start
-                    ).days
-                    if days_difference <= self.CSV_EXPORT_LIMIT:
-                        within_limits = True
-                    else:
-                        raise ValidationError(
-                            {field: f"Cannot export more than {self.CSV_EXPORT_LIMIT} days at a time"}
-                        )
-            if not within_limits:
-                raise ValidationError(
-                    {"date": f"Atleast one date field must be filtered to be within {self.CSV_EXPORT_LIMIT} days"}
-                )
-            # End Date Limiting Validation
-            queryset = self.filter_queryset(self.get_queryset()).values(*PatientRegistration.CSV_MAPPING.keys())
-            return render_to_csv_response(
-                queryset,
-                field_header_map=PatientRegistration.CSV_MAPPING,
-                field_serializer_map=PatientRegistration.CSV_MAKE_PRETTY,
+        if settings.CSV_REQUEST_PARAMETER not in request.GET:
+            return super(PatientViewSet, self).list(request, *args, **kwargs)
+        # Start Date Validation
+        temp = filters.DjangoFilterBackend().get_filterset(self.request, self.queryset, self)
+        temp.is_valid()
+        within_limits = False
+        for field in self.date_range_fields:
+            if slice_obj := temp.form.cleaned_data.get(field):
+                if not slice_obj.start or not slice_obj.stop:
+                    raise ValidationError(
+                        {
+                            field: "both starting and ending date must be provided for export"
+                        }
+                    )
+
+                days_difference = (
+                    temp.form.cleaned_data.get(field).stop - temp.form.cleaned_data.get(field).start
+                ).days
+                if days_difference <= self.CSV_EXPORT_LIMIT:
+                    within_limits = True
+                else:
+                    raise ValidationError(
+                        {field: f"Cannot export more than {self.CSV_EXPORT_LIMIT} days at a time"}
+                    )
+        if not within_limits:
+            raise ValidationError(
+                {"date": f"Atleast one date field must be filtered to be within {self.CSV_EXPORT_LIMIT} days"}
             )
-
-            # csv_mapping = {
-            #     **{f"patient__{key}": value for key, value in PatientRegistration.CSV_MAPPING.items()},
-            #     **PatientConsultation.CSV_MAPPING,
-            # }
-            # csv_make_pretty = {
-            #     **{f"patient__{key}": value for key, value in PatientRegistration.CSV_MAKE_PRETTY.items()},
-            #     **PatientConsultation.CSV_MAKE_PRETTY,
-            # }
-            # consultation_qs = PatientConsultation.objects.all()
-            # if not request.user.is_superuser:
-            #     if request.user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]:
-            #         consultation_qs = consultation_qs.filter(patient__facility__state=request.user.state)
-            #     elif request.user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]:
-            #         consultation_qs = consultation_qs.filter(patient__facility__district=request.user.district)
-            #     consultation_qs = consultation_qs.filter(
-            #         Q(patient__created_by=request.user) | Q(patient__facility__users__id__exact=request.user.id)
-            #     ).distinct("id")
-            # consultation_qs = (
-            #     consultation_qs.order_by("patient__external_id", "-id")
-            #     .distinct("patient__external_id")
-            #     .select_related(
-            #         "patient",
-            #         "patient__facility",
-            #         "patient__nearest_facility",
-            #         "patient__local_body",
-            #         "patient__district",
-            #         "patient__state",
-            #     )
-            #     .annotate(consultation_created_date=F("created_date"))
-            #     .values(*csv_mapping)
-            # )
-
-            # patient_without_consultation_qs = (
-            #     self.get_queryset()
-            #     .filter(consultations__isnull=True)
-            #     .annotate(
-            #         **{f"patient__{key}": F(key) for key in PatientRegistration.CSV_MAPPING.keys()},
-            #         **{
-            #             key: Value(*defaults)
-            #             for key, defaults in PatientConsultation.CSV_DATATYPE_DEFAULT_MAPPING.items()
-            #         },
-            #     )
-            #     .annotate(consultation_created_date=Value(None, DateTimeField()))
-            #     .select_related(
-            #         "facility", "nearest_facility", "facility__local_body", "facility__district", "facility__state",
-            #     )
-            #     .values(*csv_mapping)
-            # )
-            # queryset = consultation_qs.union(patient_without_consultation_qs)
-            # return render_to_csv_response(queryset, field_header_map=csv_mapping, field_serializer_map=csv_make_pretty,)
-
-        return super(PatientViewSet, self).list(request, *args, **kwargs)
+        # End Date Limiting Validation
+        queryset = self.filter_queryset(self.get_queryset()).values(*PatientRegistration.CSV_MAPPING.keys())
+        return render_to_csv_response(
+            queryset,
+            field_header_map=PatientRegistration.CSV_MAPPING,
+            field_serializer_map=PatientRegistration.CSV_MAKE_PRETTY,
+        )
 
     @action(detail=True, methods=["POST"])
     def discharge_patient(self, request, *args, **kwargs):
@@ -455,48 +404,50 @@ class PatientSearchViewSet(UserAccessMixin, ListModelMixin, GenericViewSet):
     def get_queryset(self):
         if self.action != "list":
             return super(PatientSearchViewSet, self).get_queryset()
-        else:
-            serializer = PatientSearchSerializer(data=self.request.query_params, partial=True)
-            serializer.is_valid(raise_exception=True)
-            if self.request.user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]:
-                search_keys = [
-                    "date_of_birth",
-                    "year_of_birth",
-                    "phone_number",
-                    "name",
-                    "age",
-                ]
-            else:
-                search_keys = ["date_of_birth", "year_of_birth", "phone_number", "age"]
-            search_fields = {
-                key: serializer.validated_data[key] for key in search_keys if serializer.validated_data.get(key)
-            }
-            if not search_fields:
-                raise serializers.ValidationError(
-                    {"detail": [f"None of the search keys provided. Available: {', '.join(search_keys)}"]}
-                )
+        serializer = PatientSearchSerializer(data=self.request.query_params, partial=True)
+        serializer.is_valid(raise_exception=True)
+        search_keys = (
+            [
+                "date_of_birth",
+                "year_of_birth",
+                "phone_number",
+                "name",
+                "age",
+            ]
+            if self.request.user.user_type
+            >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]
+            else ["date_of_birth", "year_of_birth", "phone_number", "age"]
+        )
 
-            # if not self.request.user.is_superuser:
-            #     search_fields["state_id"] = self.request.user.state_id
+        search_fields = {
+            key: serializer.validated_data[key] for key in search_keys if serializer.validated_data.get(key)
+        }
+        if not search_fields:
+            raise serializers.ValidationError(
+                {"detail": [f"None of the search keys provided. Available: {', '.join(search_keys)}"]}
+            )
 
-            if "age" in search_fields:
-                age = search_fields.pop("age")
-                year_of_birth = datetime.datetime.now().year - age
-                search_fields["age__gte"] = year_of_birth - 5
-                search_fields["age__lte"] = year_of_birth + 5
+        # if not self.request.user.is_superuser:
+        #     search_fields["state_id"] = self.request.user.state_id
 
-            name = search_fields.pop("name", None)
+        if "age" in search_fields:
+            age = search_fields.pop("age")
+            year_of_birth = datetime.datetime.now().year - age
+            search_fields["age__gte"] = year_of_birth - 5
+            search_fields["age__lte"] = year_of_birth + 5
 
-            queryset = self.queryset.filter(**search_fields)
+        name = search_fields.pop("name", None)
 
-            if name:
-                queryset = (
-                    queryset.annotate(similarity=TrigramSimilarity("name", name))
-                    .filter(similarity__gt=0.2)
-                    .order_by("-similarity")
-                )
+        queryset = self.queryset.filter(**search_fields)
 
-            return queryset
+        if name:
+            queryset = (
+                queryset.annotate(similarity=TrigramSimilarity("name", name))
+                .filter(similarity__gt=0.2)
+                .order_by("-similarity")
+            )
+
+        return queryset
 
     def retrieve(self, request, *args, **kwargs):
         raise NotImplementedError()

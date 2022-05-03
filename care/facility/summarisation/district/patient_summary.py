@@ -154,9 +154,7 @@ def DistrictPatientSummary():
             district_summary_old.save()
         else:
             modified_date = now()
-            district_summary.update(
-                {"modified_date": modified_date.strftime("%d-%m-%Y %H:%M")}
-            )
+            district_summary["modified_date"] = modified_date.strftime("%d-%m-%Y %H:%M")
             DistrictScopedSummary(
                 s_type="PatientSummary",
                 district_id=district_object.id,

@@ -326,7 +326,7 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
     objects = BaseManager()
 
     def __str__(self):
-        return "{} - {} - {}".format(self.name, self.age, self.get_gender_display())
+        return f"{self.name} - {self.age} - {self.get_gender_display()}"
 
     @property
     def tele_consultation_history(self):

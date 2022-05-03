@@ -27,9 +27,7 @@ from care.facility.models.patient_sample import SAMPLE_TYPE_CHOICES
 
 class PatientSampleFilterBackend(DRYPermissionFiltersBase):
     def filter_queryset(self, request, queryset, view):
-        if request.user.is_superuser:
-            pass
-        else:
+        if not request.user.is_superuser:
             q_objects = Q(patient__facility__users__id__exact=request.user.id)
             q_objects |= Q(testing_facility__users__id__exact=request.user.id)
             if request.user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]:

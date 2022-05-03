@@ -24,11 +24,11 @@ class FacilityPermissionMixin(BasePermissionMixin):
         )
 
     def has_object_write_permission(self, request):
-        if (
-            request.user.user_type == User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StateReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StaffReadOnly"]
-        ):
+        if request.user.user_type in [
+            User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StateReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StaffReadOnly"],
+        ]:
             return False
         if request.user.user_type < User.TYPE_VALUE_MAP["Staff"]:  # todo Temporary
             return False
@@ -46,11 +46,11 @@ class FacilityRelatedPermissionMixin(BasePermissionMixin):
     def has_write_permission(request):
         from care.facility.models.facility import Facility
 
-        if (
-            request.user.user_type == User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StateReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StaffReadOnly"]
-        ):
+        if request.user.user_type in [
+            User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StateReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StaffReadOnly"],
+        ]:
             return False
 
         facility = False
@@ -81,11 +81,11 @@ class FacilityRelatedPermissionMixin(BasePermissionMixin):
         )
 
     def has_object_write_permission(self, request):
-        if (
-            request.user.user_type == User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StateReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StaffReadOnly"]
-        ):
+        if request.user.user_type in [
+            User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StateReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StaffReadOnly"],
+        ]:
             return False
         return (
             super().has_write_permission(request)

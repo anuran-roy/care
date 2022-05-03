@@ -49,5 +49,4 @@ class AmbulanceSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         validated_data.pop("drivers", [])
-        ambulance = super(AmbulanceSerializer, self).update(instance, validated_data)
-        return ambulance
+        return super(AmbulanceSerializer, self).update(instance, validated_data)

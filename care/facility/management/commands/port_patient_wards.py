@@ -34,5 +34,5 @@ class Command(BaseCommand):
                     patient.save()
             except Exception as e:
                 failed += 1
-        print(str(failed), " failed operations ", str(success), " sucessfull operations")
+        print(failed, " failed operations ", success, " sucessfull operations")
 

@@ -77,21 +77,19 @@ class AuditLogMiddleware:
         return environ.request
 
     def __call__(self, request: HttpRequest):
-        if request.method.lower() != "get":
-            self.save(request)
-            response: HttpResponse = self.get_response(request)
-            self.save(request, response)
-
-            current_user = request.user
-            if current_user:
-                current_user_str = f"{current_user.id}|{current_user}"
-            else:
-                current_user_str = None
-
-            logger.info(f"{request.method} {request.path} {response.status_code} User:[{current_user_str}]")
-            return response
-        else:
+        if request.method.lower() == "get":
             return self.get_response(request)
+        self.save(request)
+        response: HttpResponse = self.get_response(request)
+        self.save(request, response)
+
+        if current_user := request.user:
+            current_user_str = f"{current_user.id}|{current_user}"
+        else:
+            current_user_str = None
+
+        logger.info(f"{request.method} {request.path} {response.status_code} User:[{current_user_str}]")
+        return response
 
     def process_exception(self, request, exception):
         pass

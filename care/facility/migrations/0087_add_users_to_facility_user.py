@@ -7,11 +7,15 @@ def add_users_to_facility_user(apps, *args):
     facility_model = apps.get_model('facility', 'Facility')
     facility_user_model = apps.get_model('facility', 'FacilityUser')
 
-    facility_user_objs = []
-    for facility in facility_model.objects.all():
-        facility_user_objs.append(
-            facility_user_model(facility=facility, user=facility.created_by, created_by=facility.created_by)
+    facility_user_objs = [
+        facility_user_model(
+            facility=facility,
+            user=facility.created_by,
+            created_by=facility.created_by,
         )
+        for facility in facility_model.objects.all()
+    ]
+
     facility_user_model.objects.bulk_create(facility_user_objs)
 
 

@@ -22,16 +22,13 @@ User = get_user_model()
 
 
 def remove_facility_user_cache(user_id):
-    key = "user_facilities:" + str(user_id)
+    key = f"user_facilities:{str(user_id)}"
     cache.delete(key)
     return True
 
 
 def inverse_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[1]] = choice[0]
-    return output
+    return {choice[1]: choice[0] for choice in choices}
 
 
 INVERSE_USER_TYPE = inverse_choices(User.TYPE_CHOICES)
@@ -50,9 +47,8 @@ class UserFilterSet(filters.FilterSet):
     def get_user_type(
         self, queryset, field_name, value,
     ):
-        if value:
-            if value in INVERSE_USER_TYPE:
-                return queryset.filter(user_type=INVERSE_USER_TYPE[value])
+        if value and value in INVERSE_USER_TYPE:
+            return queryset.filter(user_type=INVERSE_USER_TYPE[value])
         return queryset
 
     user_type = filters.CharFilter(method="get_user_type", field_name="user_type")

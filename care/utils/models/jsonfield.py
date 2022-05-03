@@ -13,9 +13,7 @@ if "spatialite" in settings.DATABASES["default"]["ENGINE"]:
             return "text"
 
         def from_db_value(self, value, expression, connection):
-            if value is not None:
-                return self.to_python(value)
-            return value
+            return self.to_python(value) if value is not None else value
 
         def to_python(self, value):
             if value is not None:
@@ -26,9 +24,7 @@ if "spatialite" in settings.DATABASES["default"]["ENGINE"]:
             return value
 
         def get_prep_value(self, value):
-            if value is not None:
-                return str(json.dumps(value))
-            return value
+            return str(json.dumps(value)) if value is not None else value
 
         def value_to_string(self, obj):
             return self.value_from_object(obj)

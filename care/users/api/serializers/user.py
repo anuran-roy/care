@@ -66,15 +66,18 @@ class UserCreateSerializer(SignUpSerializer):
         )
 
     def validate_facilities(self, facility_ids):
-        if facility_ids:
-            if len(facility_ids) != Facility.objects.filter(external_id__in=facility_ids).count():
-                available_facility_ids = Facility.objects.filter(external_id__in=facility_ids).values_list(
-                    "external_id", flat=True
-                )
-                not_found_ids = list(set(facility_ids) - set(available_facility_ids))
-                raise serializers.ValidationError(
-                    f"Some facilities are not available - {', '.join([str(_id) for _id in not_found_ids])}"
-                )
+        if (
+            facility_ids
+            and len(facility_ids)
+            != Facility.objects.filter(external_id__in=facility_ids).count()
+        ):
+            available_facility_ids = Facility.objects.filter(external_id__in=facility_ids).values_list(
+                "external_id", flat=True
+            )
+            not_found_ids = list(set(facility_ids) - set(available_facility_ids))
+            raise serializers.ValidationError(
+                f"Some facilities are not available - {', '.join([str(_id) for _id in not_found_ids])}"
+            )
         return facility_ids
 
     def validate_ward(self, value):
@@ -118,11 +121,13 @@ class UserCreateSerializer(SignUpSerializer):
 
     def validate(self, attrs):
         validated = super(UserCreateSerializer, self).validate(attrs)
-        if self.context["created_by"].user_type in READ_ONLY_USER_TYPES:
-            if validated["user_type"] not in READ_ONLY_USER_TYPES:
-                raise exceptions.ValidationError(
-                    {"user_type": ["Read only users can create other read only users only"]}
-                )
+        if (
+            self.context["created_by"].user_type in READ_ONLY_USER_TYPES
+            and validated["user_type"] not in READ_ONLY_USER_TYPES
+        ):
+            raise exceptions.ValidationError(
+                {"user_type": ["Read only users can create other read only users only"]}
+            )
         if (
             self.context["created_by"].user_type == User.TYPE_VALUE_MAP["Staff"]
             and validated["user_type"] == User.TYPE_VALUE_MAP["Doctor"]

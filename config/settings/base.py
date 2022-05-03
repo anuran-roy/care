@@ -2,6 +2,7 @@
 Base settings to build other settings files upon.
 """
 
+
 import json
 from datetime import timedelta
 
@@ -17,8 +18,7 @@ APPS_DIR = ROOT_DIR.path("care")
 
 env = environ.Env()
 
-READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)
-if READ_DOT_ENV_FILE:
+if READ_DOT_ENV_FILE := env.bool("DJANGO_READ_DOT_ENV_FILE", default=False):
     # OS environment variables take precedence over variables from .env
     env.read_env(str(ROOT_DIR.path(".env")))
 
@@ -168,11 +168,7 @@ MIDDLEWARE = [
     "care.audit_log.middleware.AuditLogMiddleware",
 ]
 
-# STATIC
-# ------------------------------------------------------------------------------
-USE_S3 = env.bool("USE_S3", default=False)
-
-if USE_S3:
+if USE_S3 := env.bool("USE_S3", default=False):
     # aws settings
     AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")

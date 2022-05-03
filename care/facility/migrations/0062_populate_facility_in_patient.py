@@ -9,8 +9,9 @@ def populate_facility_in_patients(apps, *args, **kwargs):
 
     with transaction.atomic():
         for p in Patient.objects.all():
-            last_consultation = Consultation.objects.filter(patient=p).last()
-            if last_consultation:
+            if last_consultation := Consultation.objects.filter(
+                patient=p
+            ).last():
                 p.facility = last_consultation.facility
                 p.save()
 

@@ -35,8 +35,9 @@ class DailyRoundsViewSet(
     PAGE_SIZE = 36  # One Round Per Hour
 
     def get_queryset(self):
-        queryset = self.queryset.filter(consultation__external_id=self.kwargs["consultation_external_id"])
-        return queryset
+        return self.queryset.filter(
+            consultation__external_id=self.kwargs["consultation_external_id"]
+        )
 
     def get_serializer(self, *args, **kwargs):
         if "data" in kwargs:
@@ -55,17 +56,18 @@ class DailyRoundsViewSet(
         if not isinstance(request.data[self.FIELDS_KEY], list):
             raise ValidationError({"fields": "Must be an List"})
         if len(request.data[self.FIELDS_KEY]) >= self.MAX_FIELDS:
-            raise ValidationError({"fields": "Must be smaller than {}".format(self.MAX_FIELDS)})
+            raise ValidationError({"fields": f"Must be smaller than {self.MAX_FIELDS}"})
 
         # Request Data Validations
 
         # Calculate Base Fields ( From . seperated ones )
         base_fields = [str(x).split(".")[0] for x in request.data[self.FIELDS_KEY]]
 
-        errors = {}
-        for field in base_fields:
-            if field not in DailyRoundAttributes:
-                errors[field] = "Not a valid field"
+        errors = {
+            field: "Not a valid field"
+            for field in base_fields
+            if field not in DailyRoundAttributes
+        }
 
         base_fields.append("external_id")
 
@@ -89,9 +91,7 @@ class DailyRoundsViewSet(
         for row in final_data_rows:
             if not row["taken_at"]:
                 continue
-            row_data = {}
-            for field in base_fields:
-                row_data[field] = row[field]
+            row_data = {field: row[field] for field in base_fields}
             row_data["id"] = row["external_id"]
             del row_data["external_id"]
             final_analytics[str(row["taken_at"])] = row_data

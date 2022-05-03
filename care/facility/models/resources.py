@@ -102,9 +102,7 @@ class ResourceRequest(FacilityBaseModel):
 
     @staticmethod
     def has_write_permission(request):
-        if request.user.user_type in READ_ONLY_USER_TYPES:
-            return False
-        return True
+        return request.user.user_type not in READ_ONLY_USER_TYPES
 
     @staticmethod
     def has_read_permission(request):
@@ -114,17 +112,13 @@ class ResourceRequest(FacilityBaseModel):
         return True
 
     def has_object_write_permission(self, request):
-        if request.user.user_type in READ_ONLY_USER_TYPES:
-            return False
-        return True
+        return request.user.user_type not in READ_ONLY_USER_TYPES
 
     def has_object_transfer_permission(self, request):
         return True
 
     def has_object_update_permission(self, request):
-        if request.user.user_type in READ_ONLY_USER_TYPES:
-            return False
-        return True
+        return request.user.user_type not in READ_ONLY_USER_TYPES
 
 
 class ResourceRequestComment(FacilityBaseModel):

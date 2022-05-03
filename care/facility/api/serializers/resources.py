@@ -17,26 +17,28 @@ from config.serializers import ChoiceField
 
 
 def inverse_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[1]] = choice[0]
-    return output
+    return {choice[1]: choice[0] for choice in choices}
 
 
 REVERSE_REQUEST_STATUS_CHOICES = inverse_choices(RESOURCE_STATUS_CHOICES)
 
 
 def has_facility_permission(user, facility):
-    if not facility:
-        return False
     return (
-        user.is_superuser
-        or (facility and user in facility.users.all())
-        or (
-            user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]
-            and (facility and user.district == facility.district)
+        (
+            user.is_superuser
+            or (facility and user in facility.users.all())
+            or (
+                user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]
+                and (facility and user.district == facility.district)
+            )
+            or (
+                user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]
+                and (facility and user.state == facility.state)
+            )
         )
-        or (user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"] and (facility and user.state == facility.state))
+        if facility
+        else False
     )
 
 
@@ -87,38 +89,38 @@ class ResourceRequestSerializer(serializers.ModelSerializer):
 
         user = self.context["request"].user
 
-        if "status" in validated_data:
-            if validated_data["status"] in LIMITED_RECIEVING_STATUS:
-                if instance.assigned_facility:
-                    if not has_facility_permission(user, instance.assigned_facility):
-                        raise ValidationError({"status": ["Permission Denied"]})
-            elif validated_data["status"] in LIMITED_REQUEST_STATUS:
-                if not has_facility_permission(user, instance.approving_facility):
-                    raise ValidationError({"status": ["Permission Denied"]})
-
+        if "status" in validated_data and (
+            validated_data["status"] in LIMITED_RECIEVING_STATUS
+            and instance.assigned_facility
+            and not has_facility_permission(user, instance.assigned_facility)
+            or validated_data["status"] not in LIMITED_RECIEVING_STATUS
+            and validated_data["status"] in LIMITED_REQUEST_STATUS
+            and not has_facility_permission(user, instance.approving_facility)
+        ):
+            raise ValidationError({"status": ["Permission Denied"]})
         # Dont allow editing origin or patient
         if "orgin_facility" in validated_data:
             validated_data.pop("orgin_facility")
 
         if "approving_facility" in validated_data:
-            approving_facility_external_id = validated_data.pop("approving_facility")["external_id"]
-            if approving_facility_external_id:
+            if approving_facility_external_id := validated_data.pop(
+                "approving_facility"
+            )["external_id"]:
                 validated_data["approving_facility_id"] = Facility.objects.get(
                     external_id=approving_facility_external_id
                 ).id
 
         if "assigned_facility" in validated_data:
-            assigned_facility_external_id = validated_data.pop("assigned_facility")["external_id"]
-            if assigned_facility_external_id:
+            if assigned_facility_external_id := validated_data.pop(
+                "assigned_facility"
+            )["external_id"]:
                 validated_data["assigned_facility_id"] = Facility.objects.get(
                     external_id=assigned_facility_external_id
                 ).id
 
         instance.last_edited_by = self.context["request"].user
 
-        new_instance = super().update(instance, validated_data)
-
-        return new_instance
+        return super().update(instance, validated_data)
 
     def create(self, validated_data):
 
@@ -135,9 +137,9 @@ class ResourceRequestSerializer(serializers.ModelSerializer):
         ).id
 
         if "assigned_facility" in validated_data:
-            assigned_facility_external_id = validated_data.pop("assigned_facility")["external_id"]
-            if assigned_facility_external_id:
-
+            if assigned_facility_external_id := validated_data.pop(
+                "assigned_facility"
+            )["external_id"]:
                 validated_data["assigned_facility_id"] = Facility.objects.get(
                     external_id=assigned_facility_external_id
                 ).id
