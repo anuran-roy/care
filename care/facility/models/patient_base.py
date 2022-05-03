@@ -3,10 +3,7 @@ from types import SimpleNamespace
 
 
 def reverse_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[0]] = choice[1]
-    return output
+    return {choice[0]: choice[1] for choice in choices}
 
 
 CURRENT_HEALTH_CHOICES = [
@@ -78,10 +75,7 @@ class DiseaseStatusEnum(enum.IntEnum):
 
 
 DISEASE_STATUS_CHOICES = [(e.value, e.name) for e in DiseaseStatusEnum]
-DISEASE_STATUS_DICT = {}
-for i in DISEASE_STATUS_CHOICES:
-    DISEASE_STATUS_DICT[i[1]] = i[0]
-
+DISEASE_STATUS_DICT = {i[1]: i[0] for i in DISEASE_STATUS_CHOICES}
 BLOOD_GROUP_CHOICES = [
     ("A+", "A+"),
     ("A-", "A-"),

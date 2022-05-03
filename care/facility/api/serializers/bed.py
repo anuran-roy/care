@@ -30,19 +30,18 @@ class BedSerializer(ModelSerializer):
 
     def validate(self, attrs):
         user = self.context["request"].user
-        if "location" in attrs and "facility" in attrs:
-            location = get_object_or_404(AssetLocation.objects.filter(external_id=attrs["location"]))
-            facility = get_object_or_404(Facility.objects.filter(external_id=attrs["facility"]))
-            facilities = get_facility_queryset(user)
-            if (not facilities.filter(id=location.facility.id).exists()) or (
-                not facilities.filter(id=facility.id).exists()
-            ):
-                raise PermissionError()
-            del attrs["location"]
-            attrs["location"] = location
-            attrs["facility"] = facility
-        else:
+        if "location" not in attrs or "facility" not in attrs:
             raise ValidationError({"location": "Field is Required", "facility": "Field is Required"})
+        location = get_object_or_404(AssetLocation.objects.filter(external_id=attrs["location"]))
+        facility = get_object_or_404(Facility.objects.filter(external_id=attrs["facility"]))
+        facilities = get_facility_queryset(user)
+        if (not facilities.filter(id=location.facility.id).exists()) or (
+            not facilities.filter(id=facility.id).exists()
+        ):
+            raise PermissionError()
+        del attrs["location"]
+        attrs["location"] = location
+        attrs["facility"] = facility
         return super().validate(attrs)
 
 
@@ -62,20 +61,19 @@ class AssetBedSerializer(ModelSerializer):
 
     def validate(self, attrs):
         user = self.context["request"].user
-        if "asset" in attrs and "bed" in attrs:
-            asset = get_object_or_404(Asset.objects.filter(external_id=attrs["asset"]))
-            bed = get_object_or_404(Bed.objects.filter(external_id=attrs["bed"]))
-            facilities = get_facility_queryset(user)
-            if (not facilities.filter(id=asset.current_location.facility.id).exists()) or (
-                not facilities.filter(id=bed.facility.id).exists()
-            ):
-                raise PermissionError()
-            attrs["asset"] = asset
-            attrs["bed"] = bed
-            if asset.current_location.facility.id != bed.facility.id:
-                raise ValidationError({"asset": "Should be in the same facility as the bed"})
-        else:
+        if "asset" not in attrs or "bed" not in attrs:
             raise ValidationError({"asset": "Field is Required", "bed": "Field is Required"})
+        asset = get_object_or_404(Asset.objects.filter(external_id=attrs["asset"]))
+        bed = get_object_or_404(Bed.objects.filter(external_id=attrs["bed"]))
+        facilities = get_facility_queryset(user)
+        if (not facilities.filter(id=asset.current_location.facility.id).exists()) or (
+            not facilities.filter(id=bed.facility.id).exists()
+        ):
+            raise PermissionError()
+        attrs["asset"] = asset
+        attrs["bed"] = bed
+        if asset.current_location.facility.id != bed.facility.id:
+            raise ValidationError({"asset": "Should be in the same facility as the bed"})
         return super().validate(attrs)
 
 
@@ -96,28 +94,35 @@ class ConsultationBedSerializer(ModelSerializer):
 
     def validate(self, attrs):
         user = self.context["request"].user
-        if "consultation" in attrs and "bed" in attrs and "start_date" in attrs:
-            bed = attrs["bed"]
-            facilities = get_facility_queryset(user)
-            permitted_consultations = get_consultation_queryset(user)
-            consultation = get_object_or_404(permitted_consultations.filter(id=attrs["consultation"].id))
-            if not facilities.filter(id=bed.facility.id).exists():
-                raise PermissionError()
-            if consultation.facility.id != bed.facility.id:
-                raise ValidationError({"consultation": "Should be in the same facility as the bed"})
-            start_date = attrs["start_date"]
-            end_date = attrs.get("end_date", None)
-            existing_qs = ConsultationBed.objects.filter(consultation=consultation, bed=bed)
-            # Conflict checking logic
-            if existing_qs.filter(start_date__gt=start_date, end_date__lt=start_date).exists():
-                raise ValidationError({"start_date": "Cannot create conflicting entry"})
-            if end_date:
-                if existing_qs.filter(start_date__gt=end_date, end_date__lt=end_date).exists():
-                    raise ValidationError({"end_date": "Cannot create conflicting entry"})
-        else:
+        if (
+            "consultation" not in attrs
+            or "bed" not in attrs
+            or "start_date" not in attrs
+        ):
             raise ValidationError(
                 {"consultation": "Field is Required", "bed": "Field is Required", "start_date": "Field is Required",}
             )
+        bed = attrs["bed"]
+        facilities = get_facility_queryset(user)
+        permitted_consultations = get_consultation_queryset(user)
+        consultation = get_object_or_404(permitted_consultations.filter(id=attrs["consultation"].id))
+        if not facilities.filter(id=bed.facility.id).exists():
+            raise PermissionError()
+        if consultation.facility.id != bed.facility.id:
+            raise ValidationError({"consultation": "Should be in the same facility as the bed"})
+        start_date = attrs["start_date"]
+        end_date = attrs.get("end_date", None)
+        existing_qs = ConsultationBed.objects.filter(consultation=consultation, bed=bed)
+        # Conflict checking logic
+        if existing_qs.filter(start_date__gt=start_date, end_date__lt=start_date).exists():
+            raise ValidationError({"start_date": "Cannot create conflicting entry"})
+        if (
+            end_date
+            and existing_qs.filter(
+                start_date__gt=end_date, end_date__lt=end_date
+            ).exists()
+        ):
+            raise ValidationError({"end_date": "Cannot create conflicting entry"})
         return super().validate(attrs)
 
     def create(self, validated_data):

@@ -28,8 +28,8 @@ def notification_task_generator(**kwargs):
 
 def get_model_class(model_name):
     if model_name == "User":
-        return apps.get_model("users.{}".format(model_name))
-    return apps.get_model("facility.{}".format(model_name))
+        return apps.get_model(f"users.{model_name}")
+    return apps.get_model(f"facility.{model_name}")
 
 
 class NotificationGenerator:
@@ -62,9 +62,8 @@ class NotificationGenerator:
                 raise NotificationCreationException("Event Invalid")
             if not isinstance(caused_by, User):
                 raise NotificationCreationException("edited_by must be an instance of a user")
-            if facility:
-                if not isinstance(facility, Facility):
-                    raise NotificationCreationException("facility must be an instance of Facility")
+            if facility and not isinstance(facility, Facility):
+                raise NotificationCreationException("facility must be an instance of Facility")
             mediums = []
             if notification_mediums:
                 for medium in notification_mediums:
@@ -122,98 +121,90 @@ class NotificationGenerator:
         if not extra_data:
             return None
         for key in extra_data:
-            extra_data[key] = apps.get_model("facility.{}".format(extra_data[key]["model_name"])).objects.get(
-                id=extra_data[key]["model_id"]
-            )
+            extra_data[key] = apps.get_model(
+                f'facility.{extra_data[key]["model_name"]}'
+            ).objects.get(id=extra_data[key]["model_id"])
+
         return extra_data
 
     def generate_extra_users(self):
-        if isinstance(self.caused_object, PatientConsultation):
-            if self.caused_object.assigned_to:
-                self.extra_users.append(self.caused_object.assigned_to.id)
-        if isinstance(self.caused_object, PatientRegistration):
-            if self.caused_object.last_consultation:
-                if self.caused_object.last_consultation.assigned_to:
-                    self.extra_users.append(self.caused_object.last_consultation.assigned_to.id)
-        if isinstance(self.caused_object, InvestigationSession):
-            if self.extra_data["consultation"].assigned_to:
-                self.extra_users.append(self.extra_data["consultation"].assigned_to.id)
-        if isinstance(self.caused_object, InvestigationValue):
-            if self.caused_object.consultation.assigned_to:
-                self.extra_users.append(self.caused_object.consultation.assigned_to.id)
-        if isinstance(self.caused_object, DailyRound):
-            if self.caused_object.consultation.assigned_to:
-                self.extra_users.append(self.caused_object.consultation.assigned_to.id)
+        if (
+            isinstance(self.caused_object, PatientConsultation)
+            and self.caused_object.assigned_to
+        ):
+            self.extra_users.append(self.caused_object.assigned_to.id)
+        if (
+            isinstance(self.caused_object, PatientRegistration)
+            and self.caused_object.last_consultation
+            and self.caused_object.last_consultation.assigned_to
+        ):
+            self.extra_users.append(self.caused_object.last_consultation.assigned_to.id)
+        if (
+            isinstance(self.caused_object, InvestigationSession)
+            and self.extra_data["consultation"].assigned_to
+        ):
+            self.extra_users.append(self.extra_data["consultation"].assigned_to.id)
+        if (
+            isinstance(self.caused_object, InvestigationValue)
+            and self.caused_object.consultation.assigned_to
+        ):
+            self.extra_users.append(self.caused_object.consultation.assigned_to.id)
+        if (
+            isinstance(self.caused_object, DailyRound)
+            and self.caused_object.consultation.assigned_to
+        ):
+            self.extra_users.append(self.caused_object.consultation.assigned_to.id)
 
     def generate_system_message(self):
         message = ""
         if isinstance(self.caused_object, PatientRegistration):
             if self.event == Notification.Event.PATIENT_CREATED.value:
-                message = "Patient {} was created by {}".format(
-                    self.caused_object.name, self.caused_by.get_full_name()
-                )
+                message = f"Patient {self.caused_object.name} was created by {self.caused_by.get_full_name()}"
+
             elif self.event == Notification.Event.PATIENT_UPDATED.value:
-                message = "Patient {} was updated by {}".format(
-                    self.caused_object.name, self.caused_by.get_full_name()
-                )
+                message = f"Patient {self.caused_object.name} was updated by {self.caused_by.get_full_name()}"
+
             if self.event == Notification.Event.PATIENT_DELETED.value:
-                message = "Patient {} was deleted by {}".format(
-                    self.caused_object.name, self.caused_by.get_full_name()
-                )
+                message = f"Patient {self.caused_object.name} was deleted by {self.caused_by.get_full_name()}"
+
         elif isinstance(self.caused_object, PatientConsultation):
             if self.event == Notification.Event.PATIENT_CONSULTATION_CREATED.value:
-                message = "Consultation for Patient {} was created by {}".format(
-                    self.caused_object.patient.name, self.caused_by.get_full_name()
-                )
+                message = f"Consultation for Patient {self.caused_object.patient.name} was created by {self.caused_by.get_full_name()}"
+
             elif self.event == Notification.Event.PATIENT_CONSULTATION_UPDATED.value:
-                message = "Consultation for Patient {} was updated by {}".format(
-                    self.caused_object.patient.name, self.caused_by.get_full_name()
-                )
+                message = f"Consultation for Patient {self.caused_object.patient.name} was updated by {self.caused_by.get_full_name()}"
+
             if self.event == Notification.Event.PATIENT_CONSULTATION_DELETED.value:
-                message = "Consultation for Patient {} was deleted by {}".format(
-                    self.caused_object.patient.name, self.caused_by.get_full_name()
-                )
+                message = f"Consultation for Patient {self.caused_object.patient.name} was deleted by {self.caused_by.get_full_name()}"
+
         elif isinstance(self.caused_object, InvestigationSession):
             if self.event == Notification.Event.INVESTIGATION_SESSION_CREATED.value:
-                message = "Investigation Session for Patient {} was created by {}".format(
-                    self.extra_data["consultation"].patient.name, self.caused_by.get_full_name()
-                )
+                message = f'Investigation Session for Patient {self.extra_data["consultation"].patient.name} was created by {self.caused_by.get_full_name()}'
+
         elif isinstance(self.caused_object, InvestigationValue):
             if self.event == Notification.Event.INVESTIGATION_UPDATED.value:
-                message = "Investigation Value for {} for Patient {} was updated by {}".format(
-                    self.caused_object.investigation.name,
-                    self.caused_object.consultation.patient.name,
-                    self.caused_by.get_full_name(),
-                )
+                message = f"Investigation Value for {self.caused_object.investigation.name} for Patient {self.caused_object.consultation.patient.name} was updated by {self.caused_by.get_full_name()}"
+
         elif isinstance(self.caused_object, DailyRound):
             if self.event == Notification.Event.PATIENT_CONSULTATION_UPDATE_CREATED.value:
-                message = "Consultation for Patient {}  at facility {} was created by {}".format(
-                    self.caused_object.consultation.patient.name,
-                    self.caused_object.consultation.facility.name,
-                    self.caused_by.get_full_name(),
-                )
+                message = f"Consultation for Patient {self.caused_object.consultation.patient.name}  at facility {self.caused_object.consultation.facility.name} was created by {self.caused_by.get_full_name()}"
+
             elif self.event == Notification.Event.PATIENT_CONSULTATION_UPDATE_UPDATED.value:
-                message = "Consultation for Patient {}  at facility {} was updated by {}".format(
-                    self.caused_object.consultation.patient.name,
-                    self.caused_object.consultation.facility.name,
-                    self.caused_by.get_full_name(),
-                )
+                message = f"Consultation for Patient {self.caused_object.consultation.patient.name}  at facility {self.caused_object.consultation.facility.name} was updated by {self.caused_by.get_full_name()}"
+
         elif isinstance(self.caused_object, ShiftingRequest):
             if self.event == Notification.Event.SHIFTING_UPDATED.value:
-                message = "Shifting for Patient {} was updated by {}".format(
-                    self.caused_object.patient.name, self.caused_by.get_full_name(),
-                )
+                message = f"Shifting for Patient {self.caused_object.patient.name} was updated by {self.caused_by.get_full_name()}"
+
         return message
 
     def generate_sms_message(self):
-        message = ""
-        if isinstance(self.caused_object, ShiftingRequest):
-            if self.event == Notification.Event.SHIFTING_UPDATED.value:
-                message = "Your Shifting Request to {} has been approved in Care. Please contact {} for any queries".format(
-                    self.caused_object.assigned_facility.name,
-                    self.caused_object.shifting_approving_facility.phone_number,
-                )
-        return message
+        return (
+            f"Your Shifting Request to {self.caused_object.assigned_facility.name} has been approved in Care. Please contact {self.caused_object.shifting_approving_facility.phone_number} for any queries"
+            if isinstance(self.caused_object, ShiftingRequest)
+            and self.event == Notification.Event.SHIFTING_UPDATED.value
+            else ""
+        )
 
     def _get_default_whatsapp_config(self):
         return {
@@ -282,13 +273,15 @@ class NotificationGenerator:
         raise Exception("Action Does not have associated users")
 
     def generate_system_users(self):
-        users = []
         extra_users = self.extra_users
         caused_user = self.caused_by
         facility_users = FacilityUser.objects.filter(facility_id=self.facility.id)
-        for facility_user in facility_users:
-            if facility_user.user.id != caused_user.id:
-                users.append(facility_user.user)
+        users = [
+            facility_user.user
+            for facility_user in facility_users
+            if facility_user.user.id != caused_user.id
+        ]
+
         for user_id in extra_users:
             user_obj = User.objects.get(id=user_id)
             if user_obj.id != caused_user.id:

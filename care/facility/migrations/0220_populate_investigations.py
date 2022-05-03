@@ -142,9 +142,7 @@ investigation_groups = """Id	Name
 
 
 def none_or_float(val):
-    if len(val.strip()) != 0:
-        return float(val)
-    return None
+    return float(val) if len(val.strip()) != 0 else None
 
 
 def populate_investigations(apps, *args):

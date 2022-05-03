@@ -82,12 +82,14 @@ class TestPatient(TestBase):
         return disease_state
 
     def _get_metainfo_representation(self, patient: PatientRegistration):
-        if not patient.meta_info:
-            return None
-        return {
-            "occupation": patient.meta_info.get_occupation_display(),
-            "head_of_household": patient.meta_info.head_of_household,
-        }
+        return (
+            {
+                "occupation": patient.meta_info.get_occupation_display(),
+                "head_of_household": patient.meta_info.head_of_household,
+            }
+            if patient.meta_info
+            else None
+        )
 
     def _get_contact_patients_representation(self, patient: PatientRegistration):
         return [

@@ -40,9 +40,10 @@ class MFilter(Filter):
             return qs
         values = value.split(",")
         _filter = {
-            self.field_name + "__in": values,
-            self.field_name + "__isnull": False,
+            f"{self.field_name}__in": values,
+            f"{self.field_name}__isnull": False,
         }
+
         qs = qs.filter(**_filter)
         return qs
 
@@ -85,7 +86,7 @@ class PatientExternalTestViewSet(
         return queryset
 
     def get_serializer_class(self):
-        if self.action == "update" or self.action == "partial_update":
+        if self.action in ["update", "partial_update"]:
             return PatientExternalTestUpdateSerializer
         return super().get_serializer_class()
 
@@ -95,12 +96,11 @@ class PatientExternalTestViewSet(
         return super().destroy(request, *args, **kwargs)
 
     def check_upload_permission(self):
-        if (
+        return (
             self.request.user.is_superuser == True
-            or self.request.user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]
-        ):
-            return True
-        return False
+            or self.request.user.user_type
+            >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]
+        )
 
     def list(self, request, *args, **kwargs):
         if settings.CSV_REQUEST_PARAMETER in request.GET:
@@ -123,12 +123,10 @@ class PatientExternalTestViewSet(
             raise ValidationError({"sample_tests": "No Data was provided"})
         if type(request.data["sample_tests"]) != type([]):
             raise ValidationError({"sample_tests": "Data should be provided as a list"})
-        errors = {}
-        counter = 0
         ser_objects = []
         invalid = False
-        for sample in request.data["sample_tests"]:
-            counter += 1
+        errors = {}
+        for counter, sample in enumerate(request.data["sample_tests"], start=1):
             serialiser_obj = PatientExternalTestSerializer(data=sample)
             valid = serialiser_obj.is_valid()
             current_error = prettyerrors(serialiser_obj._errors)

@@ -52,30 +52,28 @@ class FileUpload(FacilityBaseModel):
             if self.internal_name:
                 parts = self.internal_name.split(".")
                 if len(parts) > 1:
-                    internal_name = internal_name + "." + parts[-1]
+                    internal_name = f"{internal_name}.{parts[-1]}"
             self.internal_name = internal_name
             return super().save(*args, **kwargs)
 
     def signed_url(self):
         s3Client = boto3.client("s3", **cs_provider.get_client_config())
-        signed_url = s3Client.generate_presigned_url(
+        return s3Client.generate_presigned_url(
             "put_object",
             Params={
                 "Bucket": settings.FILE_UPLOAD_BUCKET,
-                "Key": self.FileType(self.file_type).name + "/" + self.internal_name,
+                "Key": f"{self.FileType(self.file_type).name}/{self.internal_name}",
             },
-            ExpiresIn=60 * 60,  # One Hour
+            ExpiresIn=60 * 60,
         )
-        return signed_url
 
     def read_signed_url(self):
         s3Client = boto3.client("s3", **cs_provider.get_client_config())
-        signed_url = s3Client.generate_presigned_url(
+        return s3Client.generate_presigned_url(
             "get_object",
             Params={
                 "Bucket": settings.FILE_UPLOAD_BUCKET,
-                "Key": self.FileType(self.file_type).name + "/" + self.internal_name,
+                "Key": f"{self.FileType(self.file_type).name}/{self.internal_name}",
             },
-            ExpiresIn=60 * 60,  # One Hour
+            ExpiresIn=60 * 60,
         )
-        return signed_url

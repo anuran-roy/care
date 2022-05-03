@@ -46,7 +46,7 @@ class TestBase(APITestCase):
             "district": district,
             "user_type": User.TYPE_VALUE_MAP["Staff"],
         }
-        data.update(kwargs)
+        data |= kwargs
         return User.objects.create_user(**data)
 
     @classmethod
@@ -78,7 +78,7 @@ class TestBase(APITestCase):
             "phone_number": "9998887776",
             "created_by": user,
         }
-        data.update(kwargs)
+        data |= kwargs
         f = Facility(**data)
         f.save()
         return f
@@ -275,8 +275,11 @@ class TestBase(APITestCase):
         :return:
         """
         response = {}
-        response.update(self.get_local_body_representation(getattr(obj, "local_body", None)))
-        response.update(self.get_district_representation(getattr(obj, "district", None)))
+        response |= self.get_local_body_representation(
+            getattr(obj, "local_body", None)
+        )
+
+        response |= self.get_district_representation(getattr(obj, "district", None))
         response.update(self.get_state_representation(getattr(obj, "state", None)))
         return response
 

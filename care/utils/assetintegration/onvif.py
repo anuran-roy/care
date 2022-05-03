@@ -26,7 +26,7 @@ class OnvifAsset(BaseAssetIntegration):
             print("Error: Invalid Onvif Asset; Missing required fields")
 
     def get_url(self, endpoint):
-        return "http://{}{}".format(self.middleware_hostname, endpoint)
+        return f"http://{self.middleware_hostname}{endpoint}"
 
     def api_post(self, url, data=None):
         req = request.post(url, json=data)
@@ -61,8 +61,5 @@ class OnvifAsset(BaseAssetIntegration):
                 "meta": self.meta,
             }
             return self.api_post(self.get_url("gotoPreset"), data=request_data)
-        elif action.type == self.OnvifActions.GOTO_PRESET.value:
-            # Make API Call for action
-            return self.api_get(self.get_url("status"), data={})
         else:
             raise Exception("Invalid action")

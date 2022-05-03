@@ -29,15 +29,11 @@ def ratelimit(request, group="", keys=[None], increment=True):
             group = group
             key = "ip"
         else:
-            group = group + "-{}".format(key)
+            group = group + f"-{key}"
             key = settings.GETKEY
         if is_ratelimited(request, group=group, key=key, rate=settings.DJANGO_RATE_LIMIT, increment=True,):
             checkcaptcha = True
 
     if checkcaptcha:
-        if not validatecaptcha(request):
-            return True
-        else:
-            return False
-
+        return not validatecaptcha(request)
     return False

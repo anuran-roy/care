@@ -14,11 +14,16 @@ from care.utils.sms.sendSMS import sendSMS
 
 
 def rand_pass(size):
-    if not settings.USE_SMS:
-        return "45612"
-    generate_pass = "".join([random.choice(string.ascii_uppercase + string.digits) for n in range(size)])
-
-    return generate_pass
+    return (
+        "".join(
+            [
+                random.choice(string.ascii_uppercase + string.digits)
+                for _ in range(size)
+            ]
+        )
+        if settings.USE_SMS
+        else "45612"
+    )
 
 
 def send_sms(otp, phone_number):
@@ -26,10 +31,9 @@ def send_sms(otp, phone_number):
     if settings.USE_SMS:
         sendSMS(
             phone_number,
-            "CoronaSafe Network Patient Management System Login, OTP is {} . Please do not share this Confidential Login Token with anyone else".format(
-                otp
-            ),
+            f"CoronaSafe Network Patient Management System Login, OTP is {otp} . Please do not share this Confidential Login Token with anyone else",
         )
+
     else:
         print(otp, phone_number)
 

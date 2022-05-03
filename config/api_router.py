@@ -52,11 +52,7 @@ from care.users.api.viewsets.skill import SkillViewSet
 from care.users.api.viewsets.users import UserViewSet
 from care.users.api.viewsets.userskill import UserSkillViewSet
 
-if settings.DEBUG:
-    router = DefaultRouter()
-else:
-    router = SimpleRouter()
-
+router = DefaultRouter() if settings.DEBUG else SimpleRouter()
 router.register("users", UserViewSet)
 user_nested_rotuer = NestedSimpleRouter(router, r"users", lookup="users")
 user_nested_rotuer.register("skill", UserSkillViewSet)

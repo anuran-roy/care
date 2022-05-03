@@ -28,9 +28,11 @@ class JSONFieldSchemaValidator:
         return value
 
     def __eq__(self, other):
-        if not hasattr(other, "deconstruct"):
-            return False
-        return self.deconstruct() == other.deconstruct()
+        return (
+            self.deconstruct() == other.deconstruct()
+            if hasattr(other, "deconstruct")
+            else False
+        )
 
     def _extract_errors(
         self, errors: Iterable[jsonschema.ValidationError], container: List[ValidationError],

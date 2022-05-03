@@ -385,9 +385,7 @@ class DailyRound(PatientBaseModel):
         """
         Cast Zero to null values
         """
-        if not value:
-            return 0
-        return value
+        return value or 0
 
     def save(self, *args, **kwargs):
         # Calculate all automated columns and populate them
@@ -396,21 +394,21 @@ class DailyRound(PatientBaseModel):
             + self.cztn(self.glasgow_motor_response)
             + self.cztn(self.glasgow_verbal_response)
         )
-        self.total_intake_calculated = sum([x["quantity"] for x in self.infusions])
-        self.total_intake_calculated += sum([x["quantity"] for x in self.iv_fluids])
-        self.total_intake_calculated += sum([x["quantity"] for x in self.feeds])
+        self.total_intake_calculated = sum(x["quantity"] for x in self.infusions)
+        self.total_intake_calculated += sum(x["quantity"] for x in self.iv_fluids)
+        self.total_intake_calculated += sum(x["quantity"] for x in self.feeds)
 
-        self.total_output_calculated = sum([x["quantity"] for x in self.output])
+        self.total_output_calculated = sum(x["quantity"] for x in self.output)
 
         super(DailyRound, self).save(*args, **kwargs)
 
     @staticmethod
     def has_write_permission(request):
-        if (
-            request.user.user_type == User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StateReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StaffReadOnly"]
-        ):
+        if request.user.user_type in [
+            User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StateReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StaffReadOnly"],
+        ]:
             return False
         return DailyRound.has_read_permission(request)
 
@@ -419,12 +417,16 @@ class DailyRound(PatientBaseModel):
         consultation = PatientConsultation.objects.get(
             external_id=request.parser_context["kwargs"]["consultation_external_id"]
         )
-        return request.user.is_superuser or (
-            (request.user in consultation.patient.facility.users.all())
-            or (request.user == consultation.assigned_to or request.user == consultation.patient.assigned_to)
+        return (
+            request.user.is_superuser
+            or request.user in consultation.patient.facility.users.all()
+            or request.user
+            in [consultation.assigned_to, consultation.patient.assigned_to]
             or (
                 request.user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]
-                and (request.user.district == consultation.patient.facility.district)
+                and (
+                    request.user.district == consultation.patient.facility.district
+                )
             )
             or (
                 request.user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]
@@ -454,10 +456,10 @@ class DailyRound(PatientBaseModel):
         )
 
     def has_object_write_permission(self, request):
-        if (
-            request.user.user_type == User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StateReadOnlyAdmin"]
-            or request.user.user_type == User.TYPE_VALUE_MAP["StaffReadOnly"]
-        ):
+        if request.user.user_type in [
+            User.TYPE_VALUE_MAP["DistrictReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StateReadOnlyAdmin"],
+            User.TYPE_VALUE_MAP["StaffReadOnly"],
+        ]:
             return False
         return self.has_object_read_permission(request)

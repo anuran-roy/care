@@ -67,8 +67,13 @@ def pre_save_signal(sender, instance, **kwargs) -> None:
             old_hashable, old_non_hashable = seperate_hashable_dict(old)
             new_hashable, new_non_hashable = seperate_hashable_dict(new)
 
-            changes = dict(set(new_hashable.items()).difference(old_hashable.items()))
-            changes.update({k: v for k, v in new_non_hashable.items() if v != old_non_hashable.get(k)})
+            changes = dict(
+                set(new_hashable.items()).difference(old_hashable.items())
+            ) | {
+                k: v
+                for k, v in new_non_hashable.items()
+                if v != old_non_hashable.get(k)
+            }
 
         excluded_fields = settings.AUDIT_LOG["models"]["exclude"]["fields"].get(model_name, [])
         for field in excluded_fields:

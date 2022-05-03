@@ -35,9 +35,9 @@ ROOM_TYPES = [
     (50, "KASP ICU beds"),
     (60, "KASP Oxygen beds"),
     (70, "KASP Ventilator beds"),
+    *BASE_ROOM_TYPES,
 ]
 
-ROOM_TYPES.extend(BASE_ROOM_TYPES)
 
 REVERSE_ROOM_TYPES = reverse_choices(ROOM_TYPES)
 
@@ -256,7 +256,7 @@ class FacilityStaff(FacilityBaseModel):
     staff = models.ForeignKey(User, on_delete=models.CASCADE, null=False, blank=False)
 
     def __str__(self):
-        return str(self.staff) + " for facility " + str(self.facility)
+        return f"{str(self.staff)} for facility {str(self.facility)}"
 
 
 class FacilityVolunteer(FacilityBaseModel):
@@ -264,7 +264,7 @@ class FacilityVolunteer(FacilityBaseModel):
     volunteer = models.ForeignKey(User, on_delete=models.CASCADE, null=False, blank=False)
 
     def __str__(self):
-        return str(self.volunteer) + " for facility " + str(self.facility)
+        return f"{str(self.volunteer)} for facility {str(self.facility)}"
 
 
 # Facility Model End
@@ -281,7 +281,7 @@ class Building(FacilityBaseModel):
     num_buildings = models.IntegerField(validators=[MinValueValidator(0)], default=0)  # For Internal Use only
 
     def __str__(self):
-        return self.name + " under " + str(self.facility)
+        return f"{self.name} under {str(self.facility)}"
 
 
 # Building Model End
@@ -299,7 +299,7 @@ class Room(FacilityBaseModel):
     room_type = models.IntegerField(choices=ROOM_TYPES)
 
     def __str__(self):
-        return self.num + " under " + str(self.building)
+        return f"{self.num} under {str(self.building)}"
 
 
 class StaffRoomAllocation(FacilityBaseModel):
@@ -307,7 +307,7 @@ class StaffRoomAllocation(FacilityBaseModel):
     room = models.ForeignKey(Room, on_delete=models.CASCADE, null=False, blank=False)
 
     def __str__(self):
-        return str(self.staff) + " Allocated For " + str(self.room)
+        return f"{str(self.staff)} Allocated For {str(self.room)}"
 
 
 # Room Model End
@@ -322,7 +322,7 @@ class InventoryItem(FacilityBaseModel):
     unit = models.CharField(max_length=20)
 
     def __str__(self):
-        return self.name + " with unit " + self.unit + " with minimum stock " + str(self.minimum_stock)
+        return f"{self.name} with unit {self.unit} with minimum stock {str(self.minimum_stock)}"
 
 
 class Inventory(FacilityBaseModel):
@@ -331,7 +331,7 @@ class Inventory(FacilityBaseModel):
     quantitiy = models.IntegerField(validators=[MinValueValidator(0)], default=0)
 
     def __str__(self):
-        return self.item.name + " : " + str(self.quantitiy) + " " + self.item.unit + " in " + str(self.facility)
+        return f"{self.item.name} : {str(self.quantitiy)} {self.item.unit} in {str(self.facility)}"
 
     class Meta:
         verbose_name_plural = "Inventories"

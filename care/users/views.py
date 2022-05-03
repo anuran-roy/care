@@ -53,9 +53,7 @@ class SigninView(View):
 
     def get(self, request, **kwargs):
         try:
-            rate = False
-            if ratelimit(request, "login", ["ip"]):
-                rate = True
+            rate = bool(ratelimit(request, "login", ["ip"]))
             form = self.form_class()
             return render(request, self.template, {"form": form, "rate": rate})
         except Exception as e:
@@ -71,9 +69,7 @@ class SigninView(View):
         if form.is_valid():
             username = form.cleaned_data.get("username")
             password = form.cleaned_data.get("password")
-            # return HttpResponse(status=404)
-            user = authenticate(username=username, password=password)
-            if user:
+            if user := authenticate(username=username, password=password):
                 if user.is_active:
                     login(request, user)
                     if next_url:

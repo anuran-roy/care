@@ -23,8 +23,9 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
         "current_user": reset_password_token.user,
         "username": reset_password_token.user.username,
         "email": reset_password_token.user.email,
-        "reset_password_url": "{}/password_reset/{}".format(settings.CURRENT_DOMAIN, reset_password_token.key),
+        "reset_password_url": f"{settings.CURRENT_DOMAIN}/password_reset/{reset_password_token.key}",
     }
+
 
     # render email text
     email_html_message = render_to_string("email/user_reset_password.html", context)

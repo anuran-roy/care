@@ -4,7 +4,7 @@ from care.facility.models.patient_investigation import PatientInvestigation
 
 
 def get_investigation_id(investigation_external_id):
-    key = "investigation_external_id:" + investigation_external_id
+    key = f"investigation_external_id:{investigation_external_id}"
     hit = cache.get(key)
     if not hit:
         investigation_id = PatientInvestigation.objects.get(external_id=investigation_external_id).id

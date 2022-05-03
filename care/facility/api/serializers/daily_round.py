@@ -71,7 +71,14 @@ class DailyRoundSerializer(serializers.ModelSerializer):
         instance.last_edited_by = self.context["request"].user
 
         if instance.consultation.discharge_date:
-            raise ValidationError({"consultation": [f"Discharged Consultation data cannot be updated"]})
+            raise ValidationError(
+                {
+                    "consultation": [
+                        "Discharged Consultation data cannot be updated"
+                    ]
+                }
+            )
+
 
         if "action" in validated_data or "review_time" in validated_data:
             patient = instance.consultation.patient
@@ -115,8 +122,7 @@ class DailyRoundSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         if "clone_last" in validated_data:
-            should_clone = validated_data.pop("clone_last")
-            if should_clone:
+            if should_clone := validated_data.pop("clone_last"):
                 consultation = get_object_or_404(
                     get_consultation_queryset(self.context["request"].user).filter(id=validated_data["consultation"].id)
                 )
@@ -173,24 +179,44 @@ class DailyRoundSerializer(serializers.ModelSerializer):
         validated = super().validate(obj)
 
         if validated["consultation"].discharge_date:
-            raise ValidationError({"consultation": [f"Discharged Consultation data cannot be updated"]})
+            raise ValidationError(
+                {
+                    "consultation": [
+                        "Discharged Consultation data cannot be updated"
+                    ]
+                }
+            )
 
-        if "action" in validated:
-            if validated["action"] == PatientRegistration.ActionEnum.REVIEW:
-                if "review_time" not in validated:
-                    raise ValidationError(
-                        {"review_time": [f"This field is required as the patient has been requested Review."]}
-                    )
-                if validated["review_time"] <= 0:
-                    raise ValidationError({"review_time": [f"This field value is must be greater than 0."]})
+
+        if (
+            "action" in validated
+            and validated["action"] == PatientRegistration.ActionEnum.REVIEW
+        ):
+            if "review_time" not in validated:
+                raise ValidationError(
+                    {
+                        "review_time": [
+                            "This field is required as the patient has been requested Review."
+                        ]
+                    }
+                )
+
+            if validated["review_time"] <= 0:
+                raise ValidationError(
+                    {
+                        "review_time": [
+                            "This field value is must be greater than 0."
+                        ]
+                    }
+                )
+
 
         if "bed" in validated:
-            external_id = validated.pop("bed")["external_id"]
-            if external_id:
+            if external_id := validated.pop("bed")["external_id"]:
                 # TODO add authorisation checks
                 bed_object = Bed.objects.filter(external_id=external_id).first()
                 if not bed_object:
-                    raise ValidationError({"bed": [f"Obeject not found."]})
+                    raise ValidationError({"bed": ["Obeject not found."]})
                 validated["bed_id"] = bed_object.id
 
         return validated

@@ -23,10 +23,7 @@ from care.utils.filters import CareChoiceFilter
 
 
 def inverse_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[1]] = choice[0]
-    return output
+    return {choice[1]: choice[0] for choice in choices}
 
 
 inverse_resource_status = inverse_choices(RESOURCE_STATUS_CHOICES)
@@ -35,9 +32,7 @@ inverse_sub_category = inverse_choices(RESOURCE_SUB_CATEGORY_CHOICES)
 
 
 def get_request_queryset(request, queryset):
-    if request.user.is_superuser:
-        pass
-    else:
+    if not request.user.is_superuser:
         if request.user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]:
             q_objects = Q(orgin_facility__state=request.user.state)
             q_objects |= Q(approving_facility__state=request.user.state)
@@ -131,9 +126,7 @@ class ResourceRequestCommentViewSet(
 
     def get_queryset(self):
         queryset = self.queryset.filter(request__external_id=self.kwargs.get("resource_external_id"))
-        if self.request.user.is_superuser:
-            pass
-        else:
+        if not self.request.user.is_superuser:
             if self.request.user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]:
                 q_objects = Q(request__orgin_facility__state=self.request.user.state)
                 q_objects |= Q(request__approving_facility__state=self.request.user.state)

@@ -45,24 +45,22 @@ class PatientIcmr(PatientRegistration):
 
     @property
     def age_years(self):
-        if self.date_of_birth is not None:
-            age_years = relativedelta(datetime.datetime.now(), self.date_of_birth).years
-        else:
-            age_years = relativedelta(
+        return (
+            relativedelta(datetime.datetime.now(), self.date_of_birth).years
+            if self.date_of_birth is not None
+            else relativedelta(
                 datetime.datetime.now(),
                 datetime.datetime(year=self.year_of_birth, month=1, day=1),
             ).years
-        return age_years
+        )
 
     @property
     def age_months(self):
-        if self.date_of_birth is None or self.year_of_birth is None:
-            age_months = 0
-        else:
-            age_months = relativedelta(
-                datetime.datetime.now(), self.date_of_birth
-            ).months
-        return age_months
+        return (
+            0
+            if self.date_of_birth is None or self.year_of_birth is None
+            else relativedelta(datetime.datetime.now(), self.date_of_birth).months
+        )
 
     @property
     def email(self):
@@ -100,7 +98,7 @@ class PatientIcmr(PatientRegistration):
     @property
     def contact_case_name(self,):
         contact_case = self.contacted_patients.first()
-        return "" if not contact_case else contact_case.name
+        return contact_case.name if contact_case else ""
 
     @property
     def was_quarantined(self,):
@@ -186,11 +184,7 @@ class PatientSampleICMR(PatientSample):
 
     @property
     def symptoms(self):
-        return [
-            symptom
-            for symptom in self.consultation.symptoms
-            # if SYMPTOM_CHOICES[0][0] not in self.consultation.symptoms.choices.keys()
-        ]
+        return list(self.consultation.symptoms)
 
     @property
     def date_of_onset_of_symptoms(self):
@@ -206,13 +200,10 @@ class PatientConsultationICMR(PatientConsultation):
         proxy = True
 
     def is_symptomatic(self):
-        if (
+        return (
             SYMPTOM_CHOICES[0][0] not in self.symptoms.choices.keys()
             or self.symptoms_onset_date is not None
-        ):
-            return True
-        else:
-            return False
+        )
 
     def symptomatic_international_traveller(self,):
         return (

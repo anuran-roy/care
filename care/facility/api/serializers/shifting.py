@@ -23,26 +23,28 @@ from config.serializers import ChoiceField
 
 
 def inverse_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[1]] = choice[0]
-    return output
+    return {choice[1]: choice[0] for choice in choices}
 
 
 REVERSE_SHIFTING_STATUS_CHOICES = inverse_choices(SHIFTING_STATUS_CHOICES)
 
 
 def has_facility_permission(user, facility):
-    if not facility:
-        return False
     return (
-        user.is_superuser
-        or (facility and user in facility.users.all())
-        or (
-            user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]
-            and (facility and user.district == facility.district)
+        (
+            user.is_superuser
+            or (facility and user in facility.users.all())
+            or (
+                user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]
+                and (facility and user.district == facility.district)
+            )
+            or (
+                user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]
+                and (facility and user.state == facility.state)
+            )
         )
-        or (user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"] and (facility and user.state == facility.state))
+        if facility
+        else False
     )
 
 
@@ -114,20 +116,26 @@ class ShiftingSerializer(serializers.ModelSerializer):
 
         user = self.context["request"].user
 
-        if "is_kasp" in validated_data:
-            if validated_data["is_kasp"] != instance.is_kasp:  # Check only when changed
-                if not has_facility_permission(user, instance.shifting_approving_facility):
-                    raise ValidationError({"kasp": ["Permission Denied"]})
+        if (
+            "is_kasp" in validated_data
+            and validated_data["is_kasp"] != instance.is_kasp
+            and not has_facility_permission(
+                user, instance.shifting_approving_facility
+            )
+        ):
+            raise ValidationError({"kasp": ["Permission Denied"]})
 
-        if "status" in validated_data:
-            if validated_data["status"] in LIMITED_RECIEVING_STATUS:
-                if instance.assigned_facility:
-                    if not has_facility_permission(user, instance.assigned_facility):
-                        raise ValidationError({"status": ["Permission Denied"]})
-            elif validated_data["status"] in LIMITED_SHIFTING_STATUS:
-                if not has_facility_permission(user, instance.shifting_approving_facility):
-                    raise ValidationError({"status": ["Permission Denied"]})
-
+        if "status" in validated_data and (
+            validated_data["status"] in LIMITED_RECIEVING_STATUS
+            and instance.assigned_facility
+            and not has_facility_permission(user, instance.assigned_facility)
+            or validated_data["status"] not in LIMITED_RECIEVING_STATUS
+            and validated_data["status"] in LIMITED_SHIFTING_STATUS
+            and not has_facility_permission(
+                user, instance.shifting_approving_facility
+            )
+        ):
+            raise ValidationError({"status": ["Permission Denied"]})
         # Dont allow editing origin or patient
         if "orgin_facility" in validated_data:
             validated_data.pop("orgin_facility")
@@ -135,25 +143,30 @@ class ShiftingSerializer(serializers.ModelSerializer):
             validated_data.pop("patient")
 
         if "shifting_approving_facility" in validated_data:
-            shifting_approving_facility_external_id = validated_data.pop("shifting_approving_facility")["external_id"]
-            if shifting_approving_facility_external_id:
+            if shifting_approving_facility_external_id := validated_data.pop(
+                "shifting_approving_facility"
+            )["external_id"]:
                 validated_data["shifting_approving_facility_id"] = Facility.objects.get(
                     external_id=shifting_approving_facility_external_id
                 ).id
 
         assigned = False
         if "assigned_facility" in validated_data:
-            assigned_facility_external_id = validated_data.pop("assigned_facility")["external_id"]
-            if assigned_facility_external_id:
+            if assigned_facility_external_id := validated_data.pop(
+                "assigned_facility"
+            )["external_id"]:
                 validated_data["assigned_facility_id"] = Facility.objects.get(
                     external_id=assigned_facility_external_id
                 ).id
                 assigned = True
 
-        if "status" in validated_data:
-            if validated_data["status"] in RECIEVING_REQUIRED_STATUS:
-                if (not instance.assigned_facility) and (not assigned):
-                    raise ValidationError({"status": ["Destination Facility is required for moving to this stage."]})
+        if (
+            "status" in validated_data
+            and validated_data["status"] in RECIEVING_REQUIRED_STATUS
+            and (not instance.assigned_facility)
+            and (not assigned)
+        ):
+            raise ValidationError({"status": ["Destination Facility is required for moving to this stage."]})
 
         instance.last_edited_by = self.context["request"].user
 
@@ -161,16 +174,18 @@ class ShiftingSerializer(serializers.ModelSerializer):
 
         new_instance = super().update(instance, validated_data)
 
-        if "status" in validated_data:
-            if validated_data["status"] != old_status:
-                if validated_data["status"] == 40:
-                    NotificationGenerator(
-                        event=Notification.Event.SHIFTING_UPDATED,
-                        caused_by=self.context["request"].user,
-                        caused_object=ShiftingRequest.objects.get(id=new_instance.id),
-                        facility=new_instance.shifting_approving_facility,
-                        notification_mediums=[Notification.Medium.SYSTEM, Notification.Medium.SMS],
-                    ).generate()
+        if (
+            "status" in validated_data
+            and validated_data["status"] != old_status
+            and validated_data["status"] == 40
+        ):
+            NotificationGenerator(
+                event=Notification.Event.SHIFTING_UPDATED,
+                caused_by=self.context["request"].user,
+                caused_object=ShiftingRequest.objects.get(id=new_instance.id),
+                facility=new_instance.shifting_approving_facility,
+                notification_mediums=[Notification.Medium.SYSTEM, Notification.Medium.SMS],
+            ).generate()
 
         return new_instance
 
@@ -191,9 +206,9 @@ class ShiftingSerializer(serializers.ModelSerializer):
         ).id
 
         if "assigned_facility" in validated_data:
-            assigned_facility_external_id = validated_data.pop("assigned_facility")["external_id"]
-            if assigned_facility_external_id:
-
+            if assigned_facility_external_id := validated_data.pop(
+                "assigned_facility"
+            )["external_id"]:
                 validated_data["assigned_facility_id"] = Facility.objects.get(
                     external_id=assigned_facility_external_id
                 ).id

@@ -33,10 +33,7 @@ from care.utils.queryset.shifting import get_shifting_queryset
 
 
 def inverse_choices(choices):
-    output = {}
-    for choice in choices:
-        output[choice[1]] = choice[0]
-    return output
+    return {choice[1]: choice[0] for choice in choices}
 
 
 inverse_shifting_status = inverse_choices(SHIFTING_STATUS_CHOICES)
@@ -114,31 +111,40 @@ class ShiftingViewSet(
     filterset_class = ShiftingFilterSet
 
     def get_serializer_class(self):
-        serializer_class = self.serializer_class
-        if self.action == "retrieve":
-            serializer_class = ShiftingDetailSerializer
-        return serializer_class
+        return (
+            ShiftingDetailSerializer
+            if self.action == "retrieve"
+            else self.serializer_class
+        )
 
     @action(detail=True, methods=["POST"])
     def transfer(self, request, *args, **kwargs):
         shifting_obj = self.get_object()
-        if has_facility_permission(request.user, shifting_obj.shifting_approving_facility) or has_facility_permission(
-            request.user, shifting_obj.assigned_facility
+        if (
+            (
+                has_facility_permission(
+                    request.user, shifting_obj.shifting_approving_facility
+                )
+                or has_facility_permission(
+                    request.user, shifting_obj.assigned_facility
+                )
+            )
+            and shifting_obj.assigned_facility
+            and shifting_obj.status >= 70
+            and shifting_obj.patient
         ):
-            if shifting_obj.assigned_facility and shifting_obj.status >= 70:
-                if shifting_obj.patient:
-                    patient = shifting_obj.patient
-                    patient.facility = shifting_obj.assigned_facility
-                    patient.is_active = True
-                    patient.allow_transfer = False
-                    patient.save()
-                    shifting_obj.status = 80
-                    shifting_obj.save(update_fields=["status"])
-                    # Discharge from all other active consultations
-                    PatientConsultation.objects.filter(patient=patient, discharge_date__isnull=True).update(
-                        discharge_date=localtime(now())
-                    )
-                    return Response({"transfer": "completed"}, status=status.HTTP_200_OK)
+            patient = shifting_obj.patient
+            patient.facility = shifting_obj.assigned_facility
+            patient.is_active = True
+            patient.allow_transfer = False
+            patient.save()
+            shifting_obj.status = 80
+            shifting_obj.save(update_fields=["status"])
+            # Discharge from all other active consultations
+            PatientConsultation.objects.filter(patient=patient, discharge_date__isnull=True).update(
+                discharge_date=localtime(now())
+            )
+            return Response({"transfer": "completed"}, status=status.HTTP_200_OK)
         return Response({"error": "Invalid Request"}, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request, *args, **kwargs):
@@ -163,9 +169,7 @@ class ShifitngRequestCommentViewSet(
 
     def get_queryset(self):
         queryset = self.queryset.filter(request__external_id=self.kwargs.get("shift_external_id"))
-        if self.request.user.is_superuser:
-            pass
-        else:
+        if not self.request.user.is_superuser:
             if self.request.user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]:
                 q_objects = Q(request__orgin_facility__state=self.request.user.state)
                 q_objects |= Q(request__shifting_approving_facility__state=self.request.user.state)

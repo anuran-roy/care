@@ -47,8 +47,7 @@ class TestPatientSampleApi(TestBase):
 
     def get_detail_representation(self, obj=None) -> dict:
         list_repr = self.get_list_representation(obj)
-        detail_repr = list_repr.copy()
-        return detail_repr
+        return list_repr.copy()
 
     def get_sample_data(self, **kwargs):
         patient = kwargs.get("patient", self.patient)

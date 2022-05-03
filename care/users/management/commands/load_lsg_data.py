@@ -43,9 +43,8 @@ class Command(BaseCommand):
 
         def get_district_obj(district_name, state_name):
             state_obj = get_state_obj(state_name)
-            if state_name in district:
-                if district_name in district[state_name]:
-                    return district[state_name][district_name]
+            if state_name in district and district_name in district[state_name]:
+                return district[state_name][district_name]
             district_obj = District.objects.filter(name=district_name, state=state_obj).first()
             if not district_obj:
                 if not district_name:

@@ -98,14 +98,20 @@ class PatientSamplePatchSerializer(PatientSampleSerializer):
         if choice not in valid_choices:
             raise ValidationError({"status": [f"Next valid choices are: {', '.join(valid_choices)}"]})
         if choice != "COMPLETED" and validated_data.get("result"):
-            raise ValidationError({"result": [f"Result can't be updated unless test is complete"]})
+            raise ValidationError(
+                {"result": ["Result can't be updated unless test is complete"]}
+            )
+
         if choice == "COMPLETED" and not validated_data.get("result"):
-            raise ValidationError({"result": [f"is required as the test is complete"]})
+            raise ValidationError({"result": ["is required as the test is complete"]})
         if choice == "COMPLETED" and instance.result != 3:
-            raise ValidationError({"result": [f"cannot change result for completed test."]})
+            raise ValidationError({"result": ["cannot change result for completed test."]})
 
         if validated_data.get("result") is None and validated_data.get("date_of_result") is not None:
-            raise ValidationError({"date_of_result": [f"cannot be provided without result"]})
+            raise ValidationError(
+                {"date_of_result": ["cannot be provided without result"]}
+            )
+
 
         if not instance.date_of_sample and validated_data.get("status") in [
             PatientSample.SAMPLE_TEST_FLOW_MAP[key]

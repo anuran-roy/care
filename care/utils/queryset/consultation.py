@@ -12,16 +12,14 @@ def get_consultation_queryset(user):
     if user.user_type >= User.TYPE_VALUE_MAP["StateLabAdmin"]:
         q_filters = Q(facility__state=user.state)
         q_filters |= Q(patient__facility__state=user.state)
-        queryset = queryset.filter(q_filters)
     elif user.user_type >= User.TYPE_VALUE_MAP["DistrictLabAdmin"]:
         q_filters = Q(facility__district=user.district)
         q_filters |= Q(patient__facility__district=user.district)
-        queryset = queryset.filter(q_filters)
     else:
         allowed_facilities = get_accessible_facilities(user)
         q_filters = Q(facility__id__in=allowed_facilities)
         q_filters |= Q(patient__facility__id__in=allowed_facilities)
         q_filters |= Q(assigned_to=user)
         q_filters |= Q(patient__assigned_to=user)
-        queryset = queryset.filter(q_filters)
+    queryset = queryset.filter(q_filters)
     return queryset

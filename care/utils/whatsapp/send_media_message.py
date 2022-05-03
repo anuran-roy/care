@@ -36,8 +36,7 @@ def _opt_in(phone_number):
         "userid": settings.WHATSAPP_API_USERNAME,
         "channel": "whatsapp",
     }
-    resp = requests.post(settings.WHATSAPP_API_ENDPOINT, params=url_data)
-    return resp
+    return requests.post(settings.WHATSAPP_API_ENDPOINT, params=url_data)
 
 
 def _send(message, phone_number):
@@ -59,6 +58,5 @@ def _send(message, phone_number):
         "footer": message["footer"],
         "filename": message["file_name"],
     }
-    resp = requests.post(settings.WHATSAPP_API_ENDPOINT, params=url_data)
-    return resp
+    return requests.post(settings.WHATSAPP_API_ENDPOINT, params=url_data)
 

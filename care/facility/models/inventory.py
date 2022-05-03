@@ -48,7 +48,7 @@ class FacilityInventoryUnitConverter(models.Model):
     multiplier = models.FloatField(blank=False, null=False)
 
     def __str__(self):
-        return "1 " + str(self.to_unit) + " x " + str(self.multiplier) + " =  1" + str(self.from_unit)
+        return f"1 {str(self.to_unit)} x {str(self.multiplier)} =  1{str(self.from_unit)}"
 
 
 class FacilityInventoryItem(models.Model):

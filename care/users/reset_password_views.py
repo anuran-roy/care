@@ -112,7 +112,10 @@ class ResetPasswordRequestToken(GenericAPIView):
         clear_expired(now_minus_expiry_time)
 
         # find a user
-        users = User.objects.filter(**{"{}__exact".format(get_password_reset_lookup_field()): username})
+        users = User.objects.filter(
+            **{f"{get_password_reset_lookup_field()}__exact": username}
+        )
+
 
         active_user_found = False
 
